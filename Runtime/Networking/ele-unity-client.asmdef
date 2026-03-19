@@ -1,0 +1,23 @@
+{
+    "name": "ele-unity-client",
+    "rootNamespace": "ele-unity-client",
+    "references": [
+        "VIVE.OpenXR",
+        "ele-unity-helper"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.htc.upm.vive.openxr",
+            "expression": "2.5.1",
+            "define": "VIVE_OPENXR"
+        }
+    ],
+    "noEngineReferences": false
+}
