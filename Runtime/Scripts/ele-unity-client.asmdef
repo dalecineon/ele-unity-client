@@ -2,8 +2,7 @@
     "name": "ele-unity-client",
     "rootNamespace": "ele-unity-client",
     "references": [
-        "VIVE.OpenXR",
-        "ele-unity-helper"
+        "VIVE.OpenXR"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
