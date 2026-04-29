@@ -1,14 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Cineon.ELE.Networking;
 
-namespace Cineon.ELE.Networking
+namespace Cineon.ELE.Utils
 {
     /// <summary>
     /// This is an example script to show how to capture eye data using the ELEViveEyeTrackingBridge. You can call the StartCapture and StopCapture functions to control the recording of the eye data.
     /// </summary>
-    public class CaptureEyeData : MonoBehaviour
+    public class ELERecorder : MonoBehaviour
     {
         [SerializeField]
         private bool startCaptureOnStart = false; //Set this to true if you want to start the capture process on the start.
