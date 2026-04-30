@@ -285,9 +285,8 @@ GameObject:
   - component: {fileID: 4184385468168728975}
   - component: {fileID: 8712587886617913386}
   - component: {fileID: 4466638310863678809}
-  - component: {fileID: 3768250208257888032}
+  - component: {fileID: -2576128706749567977}
   - component: {fileID: 8036359752331731206}
-  - component: {fileID: 7539835151448725852}
   m_Layer: 0
   m_Name: ELE_ViveEyeTrackingController
   m_TagString: Untagged
@@ -359,7 +358,7 @@ MonoBehaviour:
   useOnlyStaticWindows: 0
   startDataCollectionOnStart: 0
   startPingOnStart: 0
---- !u!114 &3768250208257888032
+--- !u!114 &-2576128706749567977
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -368,13 +367,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 8176872591406860707}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b326d6aa793b6674e8c31ec9252f8568, type: 3}
+  m_Script: {fileID: 11500000, guid: 7650702e914f7b9428e7e1d6a5515eb8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   leftGazeTransform: {fileID: 1509422199960263856}
   rightGazeTransform: {fileID: 7252361177295616558}
   isRecording: 0
   currentGazedAtObject: null
+  eyeTrackingMode: 1
   debugRaycast: 0
   raycastDistance: 10
   rayColour: {r: 1, g: 0, b: 0, a: 1}
@@ -392,16 +392,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   startCaptureOnStart: 0
---- !u!114 &7539835151448725852
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8176872591406860707}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 77dc3d15c0d446e4cbfe62d44e6b5ea3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  StopPingAfterFirstCheck: 0
