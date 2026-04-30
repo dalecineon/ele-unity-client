@@ -436,6 +436,23 @@ namespace Cineon.ELE.Storage
             return currentResponseSet;
         }
 
+        public float GetLatestPredictionScore(string predictionName)
+        {
+            ResponseSet currentResponseSet = responseSets[responseSets.Count - 1];
+            foreach (ResponseContainer container in currentResponseSet.responseCollection)
+            {
+                foreach (ResponseData data in container.data)
+                {
+                    if (data.prediction == predictionName)
+                    {
+                        return (float)data.score;
+                    }
+                }
+            }
+            Debug.LogWarning($"Prediction {predictionName} not found in the latest response set.");
+            return 0f; // or throw an exception, or return a nullable float
+        }
+
         // /// <summary>
         // /// This will get the newest response list from the response collection.
         // /// </summary>
