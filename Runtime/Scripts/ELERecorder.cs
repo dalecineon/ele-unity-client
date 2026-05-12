@@ -26,7 +26,7 @@ namespace Cineon.ELE.Utils
         /// <summary>
         /// This is an example on how to start the eye capture process.
         /// </summary>
-        public void StartCapture()
+        public static void StartCapture()
         {
             ELEViveEyeTrackingBridge.RecordingStateChanged?.Invoke(ELEViveEyeTrackingBridge.RecordingState.Start);
         }
@@ -34,7 +34,7 @@ namespace Cineon.ELE.Utils
         /// <summary>
         /// This is an example on how to stop the eye capture process.
         /// </summary>
-        public void StopCapture()
+        public static void StopCapture()
         {
             ELEViveEyeTrackingBridge.RecordingStateChanged?.Invoke(ELEViveEyeTrackingBridge.RecordingState.Stop);
         }
