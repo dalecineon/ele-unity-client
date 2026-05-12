@@ -14,7 +14,7 @@ namespace Cineon.ELE.Storage
     /// We use Newtonsoft to give custom Json Property names as the CineonRestAPI requires specific naming conventions which are snake case.
     /// For the time being Device needs to be added in the inspector manually.
     /// </summary>
-    public class EyeDataStorage : MonoBehaviour
+    public class EyeDataStorage : ELEMonoBehaviour
     {
         public static EyeDataStorage Instance { get; private set; }
 
@@ -60,9 +60,6 @@ namespace Cineon.ELE.Storage
             fixation_pitch_dispersion_mean,
             fixation_pitch_dispersion_std
         }
-
-        //private enum ModelsType { } //This is to be added later.
-
 
         #region Eye Data Collection
         [Serializable]

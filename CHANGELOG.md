@@ -96,3 +96,10 @@
 ## [1.5.0] - 11-05-2026
 
 - Changed the metrics naming as these have changed on the ELE side.
+
+## [2.0.0] - 12-05-2026
+
+- Multiple Updates made to fix naming convention from ELE side.
+- Also hid production url string as this doesnt need to be shown
+- We now have a custom URL override but this should only be used if you are supplied a different url to use.
+- Added Logos to each ELE Script.

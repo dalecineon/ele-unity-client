@@ -15,30 +15,32 @@ using UnityEngine.UIElements;
 namespace Cineon.ELE.Networking
 {
     [RequireComponent(typeof(EyeDataStorage))]
-    public class EyeDataDistributor : MonoBehaviour
+    public class EyeDataDistributor : ELEMonoBehaviour
     {
         public static EyeDataDistributor Instance { get; private set; } //Singleton instance of the EyeDataDistributor.
 
         #region Server Settings
         public enum ServerType
         {
-            dev,
-            production
+            production,
+            customURL
         }
         [Header("Server Settings")]
-        public ServerType serverType;
+        [Space(10)]
         [SerializeField]
         public string apiKey;
-        [SerializeField]
-        public string devServerURL = "https://ele-api-gateway-64hani55.nw.gateway.dev";
-        [SerializeField]
-        private string productionServerURL = "https://ele-api-gateway-64hani55.nw.gateway.dev";
-        public string ServerURL => serverType == ServerType.dev ? devServerURL : productionServerURL;
+        [Space(8)]
+        public ServerType serverType;
+        [Space(8)]
+        public string customURL = "";
+        private string productionServerURL = "https://ele-api-gateway-v2-6j0faw0d.nw.gateway.dev";
+        public string ServerURL => serverType == ServerType.customURL ? customURL : productionServerURL;
         private string pingPath = "/ping";
         private string inferencePath = "/inference";
         #endregion
         private EyeDataStorage eyeDataStorage; //Reference to the EyeDataStorage script to get the eye data collection.
         private float initialWindowLength = 10f;//This is the initial length of the first gaze window. This has to be 10 seconds because the models need 10 seconds of data to make predictions.
+        [Space(8)]
         [Tooltip("This is the overlap gaze window time in seconds.")]
         public float rollingWindow = 5f; //This is the overlap gaze window in seconds after the first 10 seconds, so if you put 5 it would use 5-15s.
 
@@ -86,9 +88,9 @@ namespace Cineon.ELE.Networking
                 Destroy(gameObject);
             }
 
-            if (serverType == ServerType.dev)
+            if (serverType == ServerType.customURL)
             {
-                Debug.Log("Using Development Server: " + devServerURL);
+                Debug.Log("Using Development Server: " + customURL);
             }
             else
             {

@@ -8,7 +8,7 @@ using VIVE.OpenXR;
 using VIVE.OpenXR.EyeTracker;
 
 namespace Cineon.ELE.Utils{
-public class ELEViveEyeTrackingBridge : MonoBehaviour
+public class ELEViveEyeTrackingBridge : ELEMonoBehaviour
 {
     //Enum for the recording state.
     public enum RecordingState
