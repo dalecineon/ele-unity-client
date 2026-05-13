@@ -971,15 +971,40 @@ namespace Cineon.ELE.Storage
             currentResponseSet.responseMetricsAverages = metricAveragesList;
         }
 
-        // public static float GetMetricAverage(MetricType metricType = MetricsType.fixation_duration_mean)
-        // {
-        //     foreach(ResponseMetricsAverages responseMetricAverage in currentResponseSet.responseCollection.)
-        //     return currentResponseSet.responseCollection;
-        // }
+        public static float GetMetricAverage(EyeDataStorage.MetricsType metricType = MetricsType.fixation_duration_mean)
+        {
+            var metricsAverages = EyeDataStorage.Instance.currentResponseSet?.responseMetricsAverages;
+            if (metricsAverages == null || metricsAverages.Count == 0)
+            {
+                Debug.LogWarning("No metric averages available in the current response set.");
+                return 0f;
+            }
+            foreach (var metricAvg in metricsAverages)
+            {
+                if (metricAvg.metric == metricType)
+                {
+                    return metricAvg.averageScore;
+                }
+            }
+            Debug.LogWarning($"Metric {metricType} not found in the current response set averages.");
+            return 0f;
+        }
 
-        // public static float GetConstructAverage(ConstructType constructType = ConstructType.stress){
-            
-        // }
+        public static float GetConstructAverage(EyeDataStorage.ConstructType constructType = ConstructType.stress){
+            var constructsAverages = EyeDataStorage.Instance.currentResponseSet?.responseConstructsAverages;
+            if(constructsAverages == null || constructsAverages.Count == 0)
+            {
+                Debug.LogWarning("No metric averages available in the current response set");
+                return 0f;
+            }
+            foreach(var constructAvg in constructsAverages){
+                if(constructAvg.construct == constructType){
+                    return constructAvg.averageScore;
+                }
+            }
+            Debug.LogWarning($"Metric {constructType} not found in the current response set averages.");
+            return 0f;
+        }
 
 
     [ContextMenu("Save JSON")]
