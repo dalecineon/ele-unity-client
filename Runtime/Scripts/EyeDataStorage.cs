@@ -5,6 +5,8 @@ using Newtonsoft.Json;
 using Cineon.ELE.Networking;
 using static Cineon.ELE.Storage.EyeDataStorage;
 using Cineon.ELE.DownloadHelper;
+using System.IO;
+using Newtonsoft.Json.Serialization;
 
 namespace Cineon.ELE.Storage
 {
@@ -75,46 +77,170 @@ namespace Cineon.ELE.Storage
         public class EyeDataCollection
         {
             [JsonProperty("timestamp")]
-            public string timestamp;
-            [JsonProperty("left_eye")]
-            public Eye leftEye = new Eye();
-            [JsonProperty("right_eye")]
-            public Eye rightEye = new Eye();
+            public List<string> timestamp = new List<string>();
+            [JsonProperty("eye")]
+            public Eye eye = new Eye();
+            //[JsonProperty("head")]
+            //public Head head = new Head();
+
+            /// <summary>
+            /// Appends all list data from another EyeDataCollection into this one.
+            /// </summary>
+            public void AppendFrom(EyeDataCollection other)
+            {
+                timestamp.AddRange(other.timestamp);
+                eye.GazeDirection.AddRange(other.eye.GazeDirection);
+                eye.GazeDepth.AddRange(other.eye.GazeDepth);
+                eye.GazeObject.AddRange(other.eye.GazeObject);
+                eye.PupilDiameter.AddRange(other.eye.PupilDiameter);
+                eye.Openness.AddRange(other.eye.Openness);
+            }
+
+            /// <summary>
+            /// Removes a range of entries from all lists at the given index.
+            /// </summary>
+            public void RemoveRange(int index, int count)
+            {
+                timestamp.RemoveRange(index, count);
+                eye.GazeDirection.RemoveRange(index, count);
+                eye.GazeDepth.RemoveRange(index, count);
+                eye.GazeObject.RemoveRange(index, count);
+                eye.PupilDiameter.RemoveRange(index, count);
+                eye.Openness.RemoveRange(index, count);
+            }
+
+            /// <summary>
+            /// Returns the number of data entries (based on timestamp count).
+            /// </summary>
+            [JsonIgnore]
+            public int DataCount => timestamp.Count;
         }
 
         [Serializable]
         public class Eye
         {
             [SerializeField]
-            [JsonProperty("gaze_validity")]
-            private bool isGazeValid;
-            [SerializeField]
-            [JsonProperty("gaze_origin")]
-            private GazePosition gazeOrigin = new GazePosition();
-            [SerializeField]
             [JsonProperty("gaze_direction")]
-            private GazePosition gazeDirection = new GazePosition();
-            [SerializeField]
-            [JsonProperty("object_gazed_at")]
-            private string objectGazedAt = null;
-            [SerializeField]
+            private GazeVectorList gazeDirection = new GazeVectorList();
+            [JsonIgnore]
+            [JsonProperty("gaze_depth")]
+            private List<float> gazeDepth = new List<float>();
+            [JsonIgnore]
+            [JsonProperty("gaze_object")]
+            private List<string> gazeObject = new List<string>();
+            [JsonIgnore]
             [JsonProperty("pupil_diameter")]
-            private float? pupilDiameter;
+            public List<float> pupilDiameter = new List<float>();
+            [JsonIgnore]
+            [JsonProperty("openness")]
+            public List<float> openness = new List<float>();
+
+            [JsonIgnore]
+            public GazeVectorList GazeDirection { get => gazeDirection; set => gazeDirection = value; }
+            [JsonIgnore]
+            public List<float> GazeDepth { get => gazeDepth; set => gazeDepth = value; }
+            [JsonIgnore]
+            public List<string> GazeObject { get => gazeObject; set => gazeObject = value; }
+            [JsonIgnore]
+            public List<float> PupilDiameter { get => pupilDiameter; set => pupilDiameter = value; }
+            [JsonIgnore]
+            public List<float> Openness { get => openness; set => openness = value; }
+        }
+
+        [Serializable]
+        public class Head
+        {
+            [JsonProperty("direction")]
+            private GazeVector direction = new GazeVector();
+            [JsonProperty("position")]
+            private GazeVector position = new GazeVector();
+            [JsonProperty("acceleration")]
+            private GazeVector acceleration = new GazeVector();
+        }
+
+        [Serializable]
+        public class GazeVectorList
+        {
+            [JsonProperty("x")]
+            public List<float> x = new List<float>();
+            [JsonProperty("y")]
+            public List<float> y = new List<float>();
+            [JsonProperty("z")]
+            public List<float> z = new List<float>();
+
+            public void Add(Vector3 position)
+            {
+                x.Add(position.x);
+                y.Add(position.y);
+                z.Add(position.z);
+            }
+
+            public void AddRange(GazeVectorList other)
+            {
+                x.AddRange(other.x);
+                y.AddRange(other.y);
+                z.AddRange(other.z);
+            }
+
+            public void RemoveRange(int index, int count)
+            {
+                x.RemoveRange(index, count);
+                y.RemoveRange(index, count);
+                z.RemoveRange(index, count);
+            }
+
+            public void Clear()
+            {
+                x.Clear();
+                y.Clear();
+                z.Clear();
+            }
+            [JsonIgnore]
+            public int Count => x.Count;
+        }
+
+        [Serializable]
+        public class GazeVector
+        {
             [SerializeField]
-            [JsonProperty("eye_openness")]
-            private float? eyeOpenness;
-            [JsonIgnore]
-            public bool IsGazeValid { get => isGazeValid; set => isGazeValid = value; }
-            [JsonIgnore]
-            public GazePosition GazeOrigin { get => gazeOrigin; set => gazeOrigin = value; }
-            [JsonIgnore]
-            public GazePosition GazeForward { get => gazeDirection; set => gazeDirection = value; }
-            [JsonIgnore]
-            public string ObjectGazedAt { get => objectGazedAt; set => objectGazedAt = value; }
-            [JsonIgnore]
-            public float? PupilDiameter { get => pupilDiameter; set => pupilDiameter = value; }
-            [JsonIgnore]
-            public float? EyeOpenness { get => eyeOpenness; set => eyeOpenness = value; }
+            private float x;
+            [SerializeField]
+            private float y;
+            [SerializeField]
+            private float z;
+
+            public float X => x;
+            public float Y => y;
+            public float Z => z;
+
+            /// <summary>
+            /// This converts the position of the vector3 to individual x,y,z.
+            /// </summary>
+            /// <param name="position"></param>
+            public void SetPosition(Vector3 position)
+            {
+                x = position.x;
+                y = position.y;
+                z = position.z;
+            }
+
+            /// <summary>
+            /// This converts the x,y,z back to a vector3 if we ever need it.
+            /// </summary>
+            /// <returns></returns>
+            public Vector3 ToVector3()
+            {
+                return new Vector3(x, y, z);
+            }
+
+            /// <summary>
+            /// This converts the values to a readable string to be displayed in UI.
+            /// </summary>
+            /// <returns>Vector3</returns>
+            public string ToCustomString()
+            {
+                return $"x:{x.ToString("F4")},y:{y.ToString("F4")},z:{z.ToString("F4")}";
+            }
         }
 
         [Serializable]
@@ -257,6 +383,9 @@ namespace Cineon.ELE.Storage
             public List<ConstructType> constructs = new List<ConstructType>();
             [JsonProperty("metrics")]
             public List<MetricsType> metrics = new List<MetricsType>();
+            [JsonIgnore]
+            [JsonProperty("models")]
+            public List<string> models = new List<string>();
             //This is a feature that will be added at a later date.
             //[JsonProperty("models")]
             //public List<string> models = new List<string>();
@@ -264,8 +393,11 @@ namespace Cineon.ELE.Storage
             public string device;
             [JsonProperty("client")]
             public ClientInfo clientInfo = new ClientInfo();
+
             [JsonProperty("eye_data")]
-            public List<EyeDataCollection> eyeData = new List<EyeDataCollection>();
+            public EyeDataCollection eyeData = new EyeDataCollection();
+            // [JsonProperty("head")]
+            // public List<EyeDataCollection> headData = new List<EyeDataCollection>();
             //Create Temporary data for sending to the server.
             [JsonIgnore]
             public List<EyeDataCollection> temporaryEyeData = new List<EyeDataCollection>();
@@ -288,6 +420,20 @@ namespace Cineon.ELE.Storage
         {
             public List<ResponseData> data;
         }
+
+        [Serializable]
+        public class ResponseConstructsAverages
+        {
+            public ConstructType construct;
+            public float averageScore;
+        }
+
+        [Serializable]
+        public class ResponseMetricsAverages{
+            public MetricsType metric;
+            public float averageScore;
+        }
+
         //This is the response collection list and gets populate every time we get a response back from the server.
         //public List<ResponseContainer> responseCollection;
         /// <summary>
@@ -298,6 +444,8 @@ namespace Cineon.ELE.Storage
         {
             public int setNumber;
             public List<ResponseContainer> responseCollection;
+            public List<ResponseConstructsAverages> responseConstructsAverages;
+            public List<ResponseMetricsAverages> responseMetricsAverages;
         }
 
         public List<ResponseSet> responseSets = new List<ResponseSet>();
@@ -362,7 +510,7 @@ namespace Cineon.ELE.Storage
         /// </summary>
         public void ClearAllData()
         {
-            eyeDataCollectionWrapper.eyeData.Clear();
+            eyeDataCollectionWrapper.eyeData = new EyeDataCollection();
             eyeDataCollectionWrapper.temporaryEyeData.Clear();
             //responseCollection.Clear();
         }
@@ -389,7 +537,7 @@ namespace Cineon.ELE.Storage
         /// </summary>
         public void ClearEyeData()
         {
-            eyeDataCollectionWrapper.eyeData.Clear();
+            eyeDataCollectionWrapper.eyeData = new EyeDataCollection();
             eyeDataCollectionWrapper.temporaryEyeData.Clear();
             Debug.Log("Eye data cleared.");
         }
@@ -401,22 +549,29 @@ namespace Cineon.ELE.Storage
             if (debugMode)
             {
                 Debug.Log($"Eye Data Added at time : {eyeData.timestamp}");
-                Debug.Log($"Eye Data Left Valid : {eyeData.leftEye.IsGazeValid}");
-                Debug.Log($"Eye Data Right Valid : {eyeData.rightEye.IsGazeValid}");
-                Debug.Log($"Left Eye Gaze Origin : {eyeData.leftEye.GazeOrigin.ToCustomString()}");
-                Debug.Log($"Left Eye Gaze Direction : {eyeData.leftEye.GazeForward.ToCustomString()}");
-                Debug.Log($"Right Eye Gaze Origin : {eyeData.rightEye.GazeOrigin.ToCustomString()}");
-                Debug.Log($"Right Eye Gaze Direction : {eyeData.rightEye.GazeForward.ToCustomString()}");
-                Debug.Log($"Left Gaze Transform : {eyeData.leftEye.GazeOrigin.ToCustomString()}");
-                Debug.Log($"Right Gaze Transform : {eyeData.rightEye.GazeOrigin.ToCustomString()}");
-                Debug.Log($"Left Eye Object Gazed At: {eyeData.leftEye.ObjectGazedAt}");
-                Debug.Log($"Left Eye Pupil Diameter: {eyeData.leftEye.PupilDiameter}");
-                Debug.Log($"Left Eye Openness: {eyeData.leftEye.EyeOpenness}");
-                Debug.Log($"Right Eye Object Gazed At: {eyeData.rightEye.ObjectGazedAt}");
-                Debug.Log($"Right Eye Pupil Diameter: {eyeData.rightEye.PupilDiameter}");
-                Debug.Log($"Right Eye Openness: {eyeData.rightEye.EyeOpenness}");
+                Debug.Log($"Gaze Direction : {eyeData.eye.GazeDirection}");
+                Debug.Log($"Gaze Depth : {eyeData.eye.GazeDepth}");
+                Debug.Log($"Gaze Object : {eyeData.eye.GazeObject}");
+                Debug.Log($"Pupil Diameter : {eyeData.eye.PupilDiameter}");
+                Debug.Log($"Openess : {eyeData.eye.Openness}");
             }
-            eyeDataCollectionWrapper.temporaryEyeData.Add(eyeData);
+
+            // Ensure there is exactly one EyeDataCollection instance, then append into it
+            if (eyeDataCollectionWrapper.temporaryEyeData.Count == 0)
+            {
+                eyeDataCollectionWrapper.temporaryEyeData.Add(new EyeDataCollection());
+            }
+            eyeDataCollectionWrapper.temporaryEyeData[0].AppendFrom(eyeData);
+
+            // If the first two timestamps are more than 0.5s apart, discard them both
+            EyeDataCollection temp = eyeDataCollectionWrapper.temporaryEyeData[0];
+            if (temp.DataCount == 2
+                && DateTime.TryParse(temp.timestamp[0], out DateTime t0)
+                && DateTime.TryParse(temp.timestamp[1], out DateTime t1)
+                && (t1 - t0).TotalSeconds > 0.5)
+            {
+                temp.RemoveRange(0, 2);
+            }
         }
 
 
@@ -643,12 +798,15 @@ namespace Cineon.ELE.Storage
         /// </summary>
         public void SetStaticWindow()
         {
-            eyeDataCollectionWrapper.eyeData.Clear();
-            eyeDataCollectionWrapper.eyeData = new List<EyeDataCollection>(eyeDataCollectionWrapper.temporaryEyeData);
+            eyeDataCollectionWrapper.eyeData = new EyeDataCollection();
+            if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
+            {
+                eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
+            }
             eyeDataCollectionWrapper.temporaryEyeData.Clear();
             Debug.Log("Cleared Temp Eye Data");
-            Debug.Log($"{eyeDataCollectionWrapper.temporaryEyeData.Count}");
-            Debug.Log($"{eyeDataCollectionWrapper.eyeData.Count}");
+            Debug.Log($"Temp count: {eyeDataCollectionWrapper.temporaryEyeData.Count}");
+            Debug.Log($"Eye data entries: {eyeDataCollectionWrapper.eyeData.DataCount}");
         }
 
         /// <summary>
@@ -662,14 +820,13 @@ namespace Cineon.ELE.Storage
             {
                 if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
                 {
-                    DateTime startTime;
-                    if (DateTime.TryParse(eyeDataCollectionWrapper.temporaryEyeData[0].timestamp, out startTime))
+                    EyeDataCollection tempData = eyeDataCollectionWrapper.temporaryEyeData[0];
+                    if (tempData.DataCount > 0 && DateTime.TryParse(tempData.timestamp[0], out DateTime startTime))
                     {
                         int removeCount = 0;
-                        foreach (EyeDataCollection data in eyeDataCollectionWrapper.temporaryEyeData)
+                        for (int i = 0; i < tempData.DataCount; i++)
                         {
-                            DateTime entryTime;
-                            if (DateTime.TryParse(data.timestamp, out entryTime))
+                            if (DateTime.TryParse(tempData.timestamp[i], out DateTime entryTime))
                             {
                                 if ((entryTime - startTime).TotalSeconds < rollingWindowTime)
                                 {
@@ -687,16 +844,20 @@ namespace Cineon.ELE.Storage
                         }
                         if (removeCount > 0)
                         {
-                            eyeDataCollectionWrapper.temporaryEyeData.RemoveRange(0, removeCount);
+                            tempData.RemoveRange(0, removeCount);
                         }
                     }
-                    else
+                    else if (tempData.DataCount > 0)
                     {
                         Debug.LogError("Failed to parse timestamp from eye data.");
                     }
                 }
             }
-            eyeDataCollectionWrapper.eyeData = new List<EyeDataCollection>(eyeDataCollectionWrapper.temporaryEyeData);
+            eyeDataCollectionWrapper.eyeData = new EyeDataCollection();
+            if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
+            {
+                eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
+            }
         }
 
         /// <summary>
@@ -708,12 +869,13 @@ namespace Cineon.ELE.Storage
         {
             if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
             {
-                if (DateTime.TryParse(eyeDataCollectionWrapper.temporaryEyeData[^1].timestamp, out DateTime latestTime))
+                EyeDataCollection tempData = eyeDataCollectionWrapper.temporaryEyeData[0];
+                if (tempData.DataCount > 0 && DateTime.TryParse(tempData.timestamp[^1], out DateTime latestTime))
                 {
                     int removeCount = 0;
-                    foreach (EyeDataCollection data in eyeDataCollectionWrapper.temporaryEyeData)
+                    for (int i = 0; i < tempData.DataCount; i++)
                     {
-                        if (DateTime.TryParse(data.timestamp, out DateTime entryTime))
+                        if (DateTime.TryParse(tempData.timestamp[i], out DateTime entryTime))
                         {
                             if ((latestTime - entryTime).TotalSeconds > rollingWindowTime)
                             {
@@ -732,16 +894,117 @@ namespace Cineon.ELE.Storage
                     }
                     if (removeCount > 0)
                     {
-                        eyeDataCollectionWrapper.temporaryEyeData.RemoveRange(0, removeCount);
+                        tempData.RemoveRange(0, removeCount);
                     }
                 }
-                else
+                else if (tempData.DataCount > 0)
                 {
                     Debug.LogError("Failed to parse timestamp from eye data.");
                 }
             }
-            eyeDataCollectionWrapper.eyeData = new List<EyeDataCollection>(eyeDataCollectionWrapper.temporaryEyeData);
+            eyeDataCollectionWrapper.eyeData = new EyeDataCollection();
+            if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
+            {
+                eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
+            }
         }
+
+        /// <summary>
+        /// This is a function to calculate the averages of the response data as it is collected.
+        /// </summary>
+        public void GetResponseAverages()
+        {
+            if(currentResponseSet == null || currentResponseSet.responseCollection == null || currentResponseSet.responseCollection.Count == 0)
+            {
+                Debug.LogWarning("No responses available to calculate averages.");
+                return;
+            }
+
+            Dictionary<string, (float totalScore, int count)> scores = new Dictionary<string, (float totalScore, int count)>();
+
+            foreach(ResponseContainer responseCol in currentResponseSet.responseCollection)
+            {
+                foreach(ResponseData data in responseCol.data)
+                {
+                    if(scores.ContainsKey(data.prediction))
+                    {
+                        var current = scores[data.prediction];
+                        current.totalScore += (float)data.score;
+                        current.count += 1;
+                        scores[data.prediction] = current;
+                    }
+                    else
+                    {
+                        scores[data.prediction] = ((float)data.score, 1);
+                    }
+                }
+            }
+
+            List<ResponseConstructsAverages> constructAveragesList = new List<ResponseConstructsAverages>();
+            List<ResponseMetricsAverages> metricAveragesList = new List<ResponseMetricsAverages>();
+
+            foreach(var kvp in scores)
+            {
+                if (Enum.TryParse(kvp.Key, out ConstructType construct))
+                {
+                    constructAveragesList.Add(new ResponseConstructsAverages
+                    {
+                        construct = construct,
+                        averageScore = kvp.Value.totalScore / kvp.Value.count
+                    });
+                }
+                else if (Enum.TryParse(kvp.Key, out MetricsType metric))
+                {
+                    metricAveragesList.Add(new ResponseMetricsAverages
+                    {
+                        metric = metric,
+                        averageScore = kvp.Value.totalScore / kvp.Value.count
+                    });
+                }
+                else
+                {
+                    Debug.LogError($"[EyeDataStorage] No construct or metric type found for prediction: {kvp.Key}");
+                }
+            }
+
+            currentResponseSet.responseConstructsAverages = constructAveragesList;
+            currentResponseSet.responseMetricsAverages = metricAveragesList;
+        }
+
+        // public static float GetMetricAverage(MetricType metricType = MetricsType.fixation_duration_mean)
+        // {
+        //     foreach(ResponseMetricsAverages responseMetricAverage in currentResponseSet.responseCollection.)
+        //     return currentResponseSet.responseCollection;
+        // }
+
+        // public static float GetConstructAverage(ConstructType constructType = ConstructType.stress){
+            
+        // }
+
+
+    [ContextMenu("Save JSON")]
+    public void SaveJson()
+    {
+        var settings = new JsonSerializerSettings
+            {
+                ContractResolver = new DefaultContractResolver
+                {
+                    NamingStrategy = new SnakeCaseNamingStrategy()
+                },
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.Indented
+            };
+            string json = JsonConvert.SerializeObject(eyeDataCollectionWrapper, settings);
+
+        // File path
+        string path = Path.Combine(Application.streamingAssetsPath, "eye_tracking.json");
+
+        // Save file
+        File.WriteAllText(path, json);
+
+        Debug.Log($"JSON saved to: {path}");
+        Debug.Log(json);
+    }
 
     }
 }

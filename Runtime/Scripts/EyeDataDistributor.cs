@@ -5,6 +5,7 @@ using UnityEngine;
 using Cineon.ELE.Networking;
 using System;
 using UnityEngine.UIElements;
+using static Cineon.ELE.Storage.EyeDataStorage;
 
 //TODO
 // Implement the logic to distribute eye data to the server
@@ -33,7 +34,7 @@ namespace Cineon.ELE.Networking
         public ServerType serverType;
         [Space(8)]
         public string customURL = "";
-        private string productionServerURL = "https://ele-api-gateway-v2-6j0faw0d.nw.gateway.dev";
+        private string productionServerURL = "https://ele-api-prod-gateway-v2-1qq3bqcw.nw.gateway.dev";
         public string ServerURL => serverType == ServerType.customURL ? customURL : productionServerURL;
         private string pingPath = "/ping";
         private string inferencePath = "/inference";
@@ -41,14 +42,11 @@ namespace Cineon.ELE.Networking
         private EyeDataStorage eyeDataStorage; //Reference to the EyeDataStorage script to get the eye data collection.
         private float initialWindowLength = 10f;//This is the initial length of the first gaze window. This has to be 10 seconds because the models need 10 seconds of data to make predictions.
         [Space(8)]
-        [Tooltip("This is the overlap gaze window time in seconds.")]
+        [Tooltip("This is the overlap gaze window time in seconds. It will always do 10 seconds first.")]
+        [Range(2f,20f)]
         public float rollingWindow = 5f; //This is the overlap gaze window in seconds after the first 10 seconds, so if you put 5 it would use 5-15s.
-
         public bool useOnlyStaticWindows = false; //This is used if you don't want to use a rolling window and just send static 10 second windows.
-
         private bool isFirstCollection = true;
-        [SerializeField]
-        private bool startDataCollectionOnStart = false; //This is a bool to start the data collection at the start.
         [SerializeField]
         private bool startPingOnStart = false; //This is a bool to start the ping at the start.
 
@@ -74,6 +72,8 @@ namespace Cineon.ELE.Networking
         #region IEnumerator Tracking
         private Coroutine rollingWindowRoutine;
         #endregion
+
+        private int requestCounter = 0;
 
         void Awake()
         {
@@ -109,11 +109,6 @@ namespace Cineon.ELE.Networking
                 Debug.LogError("EyeDataStorage reference is missing.");
                 enabled = false;
                 return;
-            }
-            if (startDataCollectionOnStart)
-            {
-                //Start the coroutine.
-                rollingWindowRoutine = StartCoroutine(WaitForEyeDataCollection(initialWindowLength, RetrieveEyeData));
             }
             if (startPingOnStart)
             {
@@ -185,6 +180,7 @@ namespace Cineon.ELE.Networking
                 if (useOnlyStaticWindows)
                 {
                     eyeDataStorage.SetStaticWindow();
+                    Debug.Log($"[EyeDataDistributor] Static window - sending {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount} data points.");
                     PostData().ContinueWith(task =>
                     {
                         if (task.IsFaulted)
@@ -206,8 +202,9 @@ namespace Cineon.ELE.Networking
                     }
                     else
                     {
-                        eyeDataStorage.SetSampleWindow(isFirstCollection, initialWindowLength);
+                        eyeDataStorage.SetSampleWindow(isFirstCollection, rollingWindow);
                     }
+                    Debug.Log($"[EyeDataDistributor] Rolling window - sending {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount} data points at {Time.time:F1}s.");
                     PostData().ContinueWith(task =>
                     {
                         if (task.IsFaulted)
@@ -228,16 +225,21 @@ namespace Cineon.ELE.Networking
         /// </summary>
         private async Task PostData()
         {
+            int requestId = ++requestCounter;
+            Debug.Log($"[EyeDataDistributor] #{requestId} Sending data to server...");
+            float startTime = Time.realtimeSinceStartup;
             EyeDataStorage.ResponseContainer response = await CineonRestClient.Post<EyeDataStorage.EyeDataCollectionWrapper, EyeDataStorage.ResponseContainer>($"{ServerURL}{inferencePath}", eyeDataStorage.eyeDataCollectionWrapper);
+            float elapsed = Time.realtimeSinceStartup - startTime;
             if (response != null)
             {
                 eyeDataStorage.AddResponseToCurrentSet(response);
-                Debug.Log($"Response received: {response}");
+                Debug.Log($"[EyeDataDistributor] #{requestId} Response received in {elapsed:F2}s.");
                 OnServerResponseSuccess?.Invoke();
+                eyeDataStorage.GetResponseAverages();
             }
             else
             {
-                Debug.LogError("Failed to receive response from server.");
+                Debug.LogError($"[EyeDataDistributor] #{requestId} Failed to receive response from server after {elapsed:F2}s.");
             }
         }
 
