@@ -50,16 +50,27 @@ MonoBehaviour:
   eyeDataCollectionWrapper:
     constructs: 
     metrics: 
+    models: []
     device: 
     clientInfo:
       platform: 
       version: 
-    eyeData: []
+    eyeData:
+      timestamp: []
+      eye:
+        gazeDirection:
+          x: []
+          y: []
+          z: []
+        pupilDiameter: []
+        openness: []
     temporaryEyeData: []
   responseSets: []
   currentResponseSet:
     setNumber: 0
     responseCollection: []
+    responseConstructsAverages: []
+    responseMetricsAverages: []
   debugMode: 0
   saveDataToFile: 0
 --- !u!114 &7240940978299157496
@@ -74,13 +85,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7aac778fc0140a94fb68ac3c8503783c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serverType: 0
   apiKey: 
-  devServerURL: https://ele-api-elliot-479937931673.europe-west2.run.app
-  productionServerURL: https://ele-api-gateway-64hani55.nw.gateway.dev
+  serverType: 0
+  customURL: 
   rollingWindow: 5
   useOnlyStaticWindows: 0
-  startDataCollectionOnStart: 0
   startPingOnStart: 0
 --- !u!114 &-2483374150410163374
 MonoBehaviour:
@@ -100,6 +109,7 @@ MonoBehaviour:
   currentGazedAtObject: null
   eyeTrackingMode: 1
   debugRaycast: 0
+  debugData: 0
   raycastDistance: 10
   rayColour: {r: 1, g: 0, b: 0, a: 1}
   lineRenderer: {fileID: 0}

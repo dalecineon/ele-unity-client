@@ -326,16 +326,27 @@ MonoBehaviour:
   eyeDataCollectionWrapper:
     constructs: 000000000100000002000000
     metrics: 
+    models: []
     device: Vive Vision Pro
     clientInfo:
       platform: 
       version: 
-    eyeData: []
+    eyeData:
+      timestamp: []
+      eye:
+        gazeDirection:
+          x: []
+          y: []
+          z: []
+        pupilDiameter: []
+        openness: []
     temporaryEyeData: []
   responseSets: []
   currentResponseSet:
     setNumber: 0
     responseCollection: []
+    responseConstructsAverages: []
+    responseMetricsAverages: []
   debugMode: 0
   saveDataToFile: 0
 --- !u!114 &4466638310863678809
@@ -350,13 +361,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7aac778fc0140a94fb68ac3c8503783c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serverType: 1
   apiKey: 
-  devServerURL: 
-  productionServerURL: 
+  serverType: 1
+  customURL: 
   rollingWindow: 10
   useOnlyStaticWindows: 0
-  startDataCollectionOnStart: 0
   startPingOnStart: 0
 --- !u!114 &-2576128706749567977
 MonoBehaviour:
@@ -376,6 +385,7 @@ MonoBehaviour:
   currentGazedAtObject: null
   eyeTrackingMode: 1
   debugRaycast: 0
+  debugData: 0
   raycastDistance: 10
   rayColour: {r: 1, g: 0, b: 0, a: 1}
   lineRenderer: {fileID: 0}

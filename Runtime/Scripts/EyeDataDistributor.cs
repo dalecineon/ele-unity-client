@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Cineon.ELE.Storage;
 using UnityEngine;
@@ -15,6 +16,19 @@ using static Cineon.ELE.Storage.EyeDataStorage;
 
 namespace Cineon.ELE.Networking
 {
+    [Serializable]
+    public class ServerResponseEntry
+    {
+        public int requestId;
+        public float responseTime;
+
+        public ServerResponseEntry(int requestId, float responseTime)
+        {
+            this.requestId = requestId;
+            this.responseTime = responseTime;
+        }
+    }
+
     [RequireComponent(typeof(EyeDataStorage))]
     public class EyeDataDistributor : ELEMonoBehaviour
     {
@@ -43,8 +57,11 @@ namespace Cineon.ELE.Networking
         private float initialWindowLength = 10f;//This is the initial length of the first gaze window. This has to be 10 seconds because the models need 10 seconds of data to make predictions.
         [Space(8)]
         [Tooltip("This is the overlap gaze window time in seconds. It will always do 10 seconds first.")]
-        [Range(2f,20f)]
+        [Range(2f, 20f)]
         public float rollingWindow = 5f; //This is the overlap gaze window in seconds after the first 10 seconds, so if you put 5 it would use 5-15s.
+        public float countdownToNextPush = 0f; //Countdown timer until the next data push to the server.
+        public float serverResponseTime = 0f; //Time in seconds the server took to respond to the last request.
+        public List<ServerResponseEntry> serverResponseTimes = new List<ServerResponseEntry>(); //List of all server response times.
         public bool useOnlyStaticWindows = false; //This is used if you don't want to use a rolling window and just send static 10 second windows.
         private bool isFirstCollection = true;
         [SerializeField]
@@ -155,11 +172,23 @@ namespace Cineon.ELE.Networking
         private IEnumerator WaitForEyeDataCollection(float delaySeconds, System.Action callback)
         {
             float repeatDelay = useOnlyStaticWindows ? delaySeconds : rollingWindow;
-            yield return new WaitForSeconds(delaySeconds);
+            countdownToNextPush = delaySeconds;
+            while (countdownToNextPush > 0f)
+            {
+                countdownToNextPush -= Time.deltaTime;
+                yield return null;
+            }
+            countdownToNextPush = 0f;
             callback?.Invoke();
             while (true)
             {
-                yield return new WaitForSeconds(repeatDelay);
+                countdownToNextPush = repeatDelay;
+                while (countdownToNextPush > 0f)
+                {
+                    countdownToNextPush -= Time.deltaTime;
+                    yield return null;
+                }
+                countdownToNextPush = 0f;
                 callback?.Invoke();
             }
         }
@@ -230,6 +259,8 @@ namespace Cineon.ELE.Networking
             float startTime = Time.realtimeSinceStartup;
             EyeDataStorage.ResponseContainer response = await CineonRestClient.Post<EyeDataStorage.EyeDataCollectionWrapper, EyeDataStorage.ResponseContainer>($"{ServerURL}{inferencePath}", eyeDataStorage.eyeDataCollectionWrapper);
             float elapsed = Time.realtimeSinceStartup - startTime;
+            serverResponseTime = elapsed;
+            serverResponseTimes.Add(new ServerResponseEntry(requestId, elapsed));
             if (response != null)
             {
                 eyeDataStorage.AddResponseToCurrentSet(response);

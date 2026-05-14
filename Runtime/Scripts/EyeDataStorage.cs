@@ -80,8 +80,8 @@ namespace Cineon.ELE.Storage
             public List<string> timestamp = new List<string>();
             [JsonProperty("eye")]
             public Eye eye = new Eye();
-            //[JsonProperty("head")]
-            //public Head head = new Head();
+            [JsonProperty("head")]
+            public Head head = new Head();
 
             /// <summary>
             /// Appends all list data from another EyeDataCollection into this one.
@@ -90,10 +90,11 @@ namespace Cineon.ELE.Storage
             {
                 timestamp.AddRange(other.timestamp);
                 eye.GazeDirection.AddRange(other.eye.GazeDirection);
-                eye.GazeDepth.AddRange(other.eye.GazeDepth);
                 eye.GazeObject.AddRange(other.eye.GazeObject);
                 eye.PupilDiameter.AddRange(other.eye.PupilDiameter);
                 eye.Openness.AddRange(other.eye.Openness);
+                head.Direction.AddRange(other.head.Direction);
+                head.Position.AddRange(other.head.Position);
             }
 
             /// <summary>
@@ -103,10 +104,11 @@ namespace Cineon.ELE.Storage
             {
                 timestamp.RemoveRange(index, count);
                 eye.GazeDirection.RemoveRange(index, count);
-                eye.GazeDepth.RemoveRange(index, count);
                 eye.GazeObject.RemoveRange(index, count);
                 eye.PupilDiameter.RemoveRange(index, count);
                 eye.Openness.RemoveRange(index, count);
+                head.Direction.RemoveRange(index, count);
+                head.Position.RemoveRange(index, count);
             }
 
             /// <summary>
@@ -122,9 +124,9 @@ namespace Cineon.ELE.Storage
             [SerializeField]
             [JsonProperty("gaze_direction")]
             private GazeVectorList gazeDirection = new GazeVectorList();
-            [JsonIgnore]
-            [JsonProperty("gaze_depth")]
-            private List<float> gazeDepth = new List<float>();
+            //[JsonIgnore]
+            //[JsonProperty("gaze_depth")]
+            //private List<float> gazeDepth = new List<float>();
             [JsonIgnore]
             [JsonProperty("gaze_object")]
             private List<string> gazeObject = new List<string>();
@@ -137,8 +139,8 @@ namespace Cineon.ELE.Storage
 
             [JsonIgnore]
             public GazeVectorList GazeDirection { get => gazeDirection; set => gazeDirection = value; }
-            [JsonIgnore]
-            public List<float> GazeDepth { get => gazeDepth; set => gazeDepth = value; }
+            //[JsonIgnore]
+            //public List<float> GazeDepth { get => gazeDepth; set => gazeDepth = value; }
             [JsonIgnore]
             public List<string> GazeObject { get => gazeObject; set => gazeObject = value; }
             [JsonIgnore]
@@ -150,12 +152,22 @@ namespace Cineon.ELE.Storage
         [Serializable]
         public class Head
         {
+            [SerializeField]
             [JsonProperty("direction")]
-            private GazeVector direction = new GazeVector();
+            private GazeVectorList direction = new GazeVectorList();
+            [SerializeField]
             [JsonProperty("position")]
-            private GazeVector position = new GazeVector();
+            private GazeVectorList position = new GazeVectorList();
+            [SerializeField]
             [JsonProperty("acceleration")]
-            private GazeVector acceleration = new GazeVector();
+            [JsonIgnore]
+            private GazeVectorList acceleration = new GazeVectorList();
+            [JsonIgnore]
+            public GazeVectorList Direction { get => direction; set => direction = value; }
+            [JsonIgnore]
+            public GazeVectorList Position { get => position; set => position = value; }
+            [JsonIgnore]
+            public GazeVectorList Acceleration { get => acceleration; set => acceleration = value; }
         }
 
         [Serializable]
@@ -197,50 +209,6 @@ namespace Cineon.ELE.Storage
             }
             [JsonIgnore]
             public int Count => x.Count;
-        }
-
-        [Serializable]
-        public class GazeVector
-        {
-            [SerializeField]
-            private float x;
-            [SerializeField]
-            private float y;
-            [SerializeField]
-            private float z;
-
-            public float X => x;
-            public float Y => y;
-            public float Z => z;
-
-            /// <summary>
-            /// This converts the position of the vector3 to individual x,y,z.
-            /// </summary>
-            /// <param name="position"></param>
-            public void SetPosition(Vector3 position)
-            {
-                x = position.x;
-                y = position.y;
-                z = position.z;
-            }
-
-            /// <summary>
-            /// This converts the x,y,z back to a vector3 if we ever need it.
-            /// </summary>
-            /// <returns></returns>
-            public Vector3 ToVector3()
-            {
-                return new Vector3(x, y, z);
-            }
-
-            /// <summary>
-            /// This converts the values to a readable string to be displayed in UI.
-            /// </summary>
-            /// <returns>Vector3</returns>
-            public string ToCustomString()
-            {
-                return $"x:{x.ToString("F4")},y:{y.ToString("F4")},z:{z.ToString("F4")}";
-            }
         }
 
         [Serializable]
@@ -429,7 +397,8 @@ namespace Cineon.ELE.Storage
         }
 
         [Serializable]
-        public class ResponseMetricsAverages{
+        public class ResponseMetricsAverages
+        {
             public MetricsType metric;
             public float averageScore;
         }
@@ -550,10 +519,12 @@ namespace Cineon.ELE.Storage
             {
                 Debug.Log($"Eye Data Added at time : {eyeData.timestamp}");
                 Debug.Log($"Gaze Direction : {eyeData.eye.GazeDirection}");
-                Debug.Log($"Gaze Depth : {eyeData.eye.GazeDepth}");
+                //Debug.Log($"Gaze Depth : {eyeData.eye.GazeDepth}");
                 Debug.Log($"Gaze Object : {eyeData.eye.GazeObject}");
                 Debug.Log($"Pupil Diameter : {eyeData.eye.PupilDiameter}");
                 Debug.Log($"Openess : {eyeData.eye.Openness}");
+                Debug.Log($"Head Direction : {eyeData.head.Direction}");
+                Debug.Log($"Head Position : {eyeData.head.Position}");
             }
 
             // Ensure there is exactly one EyeDataCollection instance, then append into it
@@ -914,7 +885,7 @@ namespace Cineon.ELE.Storage
         /// </summary>
         public void GetResponseAverages()
         {
-            if(currentResponseSet == null || currentResponseSet.responseCollection == null || currentResponseSet.responseCollection.Count == 0)
+            if (currentResponseSet == null || currentResponseSet.responseCollection == null || currentResponseSet.responseCollection.Count == 0)
             {
                 Debug.LogWarning("No responses available to calculate averages.");
                 return;
@@ -922,11 +893,11 @@ namespace Cineon.ELE.Storage
 
             Dictionary<string, (float totalScore, int count)> scores = new Dictionary<string, (float totalScore, int count)>();
 
-            foreach(ResponseContainer responseCol in currentResponseSet.responseCollection)
+            foreach (ResponseContainer responseCol in currentResponseSet.responseCollection)
             {
-                foreach(ResponseData data in responseCol.data)
+                foreach (ResponseData data in responseCol.data)
                 {
-                    if(scores.ContainsKey(data.prediction))
+                    if (scores.ContainsKey(data.prediction))
                     {
                         var current = scores[data.prediction];
                         current.totalScore += (float)data.score;
@@ -943,7 +914,7 @@ namespace Cineon.ELE.Storage
             List<ResponseConstructsAverages> constructAveragesList = new List<ResponseConstructsAverages>();
             List<ResponseMetricsAverages> metricAveragesList = new List<ResponseMetricsAverages>();
 
-            foreach(var kvp in scores)
+            foreach (var kvp in scores)
             {
                 if (Enum.TryParse(kvp.Key, out ConstructType construct))
                 {
@@ -990,15 +961,18 @@ namespace Cineon.ELE.Storage
             return 0f;
         }
 
-        public static float GetConstructAverage(EyeDataStorage.ConstructType constructType = ConstructType.stress){
+        public static float GetConstructAverage(EyeDataStorage.ConstructType constructType = ConstructType.stress)
+        {
             var constructsAverages = EyeDataStorage.Instance.currentResponseSet?.responseConstructsAverages;
-            if(constructsAverages == null || constructsAverages.Count == 0)
+            if (constructsAverages == null || constructsAverages.Count == 0)
             {
                 Debug.LogWarning("No metric averages available in the current response set");
                 return 0f;
             }
-            foreach(var constructAvg in constructsAverages){
-                if(constructAvg.construct == constructType){
+            foreach (var constructAvg in constructsAverages)
+            {
+                if (constructAvg.construct == constructType)
+                {
                     return constructAvg.averageScore;
                 }
             }
@@ -1007,10 +981,10 @@ namespace Cineon.ELE.Storage
         }
 
 
-    [ContextMenu("Save JSON")]
-    public void SaveJson()
-    {
-        var settings = new JsonSerializerSettings
+        [ContextMenu("Save JSON")]
+        public void SaveJson()
+        {
+            var settings = new JsonSerializerSettings
             {
                 ContractResolver = new DefaultContractResolver
                 {
@@ -1021,15 +995,15 @@ namespace Cineon.ELE.Storage
             };
             string json = JsonConvert.SerializeObject(eyeDataCollectionWrapper, settings);
 
-        // File path
-        string path = Path.Combine(Application.streamingAssetsPath, "eye_tracking.json");
+            // File path
+            string path = Path.Combine(Application.streamingAssetsPath, "eye_tracking.json");
 
-        // Save file
-        File.WriteAllText(path, json);
+            // Save file
+            File.WriteAllText(path, json);
 
-        Debug.Log($"JSON saved to: {path}");
-        Debug.Log(json);
-    }
+            Debug.Log($"JSON saved to: {path}");
+            Debug.Log(json);
+        }
 
     }
 }

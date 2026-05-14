@@ -30,6 +30,7 @@ namespace Cineon.ELE.Utils
         public bool isRecording = false; //This is the recording state of the headset data.
 
         [Header("VIVE only Settings")]
+        public Transform head;
         public XrSingleEyeGazeDataHTC leftGaze;
         public XrSingleEyeGazeDataHTC rightGaze;
         public XrSingleEyePupilDataHTC leftPupil;
@@ -52,6 +53,16 @@ namespace Cineon.ELE.Utils
         public float raycastDistance = 10f;
         public Color rayColour = Color.red;
         public LineRenderer lineRenderer;
+
+        //This is to show your eye direction.
+        public Transform UniEyeDebugger;
+        public LineRenderer uniLineRenderer;
+        //public Transform rightEyeDebugger;
+
+        void Awake()
+        {
+            head = Camera.main.transform;
+        }
 
         /// <summary>
         /// Listening to the recording state changes.
@@ -114,19 +125,27 @@ namespace Cineon.ELE.Utils
             EyeDataStorage.EyeDataCollection data = new EyeDataStorage.EyeDataCollection();
             data.timestamp.Add(DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffffK"));
             EyeDataStorage.Eye eye = data.eye;
+            EyeDataStorage.Head headData = data.head;
 
-            // Set dummy values for all properties
+            // Set dummy head direction and position
+            Vector3 dummyHeadPosition = new Vector3(UnityEngine.Random.Range(-0.1f, 0.1f), UnityEngine.Random.Range(1.5f, 1.7f), UnityEngine.Random.Range(-0.1f, 0.1f));
+            Vector3 dummyHeadDirection = CreateRandomUnitVector(true);
+            headData.Position.Add(dummyHeadPosition);
+            headData.Direction.Add(dummyHeadDirection);
+
+            // Set dummy values for all eye properties
             Vector3 gazeDir = CreateRandomUnitVector(true);
             eye.GazeDirection.Add(gazeDir);
-            eye.GazeDepth.Add(UnityEngine.Random.Range(0.5f, 2f));
+            //eye.GazeDepth.Add(UnityEngine.Random.Range(0.5f, 2f));
             eye.GazeObject.Add(currentGazedAtObject);
             eye.PupilDiameter.Add(UnityEngine.Random.Range(2f, 8f));
             eye.Openness.Add(UnityEngine.Random.Range(0f, 1f));
-            
-            if(debugData){
-                Debug.Log($"Dummy EyeData: GazeDirection=({gazeDir.x:F4},{gazeDir.y:F4},{gazeDir.z:F4}), GazeDepth={eye.GazeDepth[0]}, GazeObject={eye.GazeObject[0]}, PupilDiameter={eye.PupilDiameter[0]}, Openness={eye.Openness[0]}");
+
+            if (debugData)
+            {
+                Debug.Log($"Dummy EyeData: GazeDirection=({gazeDir.x:F4},{gazeDir.y:F4},{gazeDir.z:F4}), GazeObject={eye.GazeObject[0]}, PupilDiameter={eye.PupilDiameter[0]}, Openness={eye.Openness[0]}, HeadPosition=({dummyHeadPosition.x:F2},{dummyHeadPosition.y:F2},{dummyHeadPosition.z:F2}), HeadDirection=({dummyHeadDirection.x:F2},{dummyHeadDirection.y:F2},{dummyHeadDirection.z:F2})");
             }
-            
+
             EyeDataStorage.Instance.UpdateEyeData(data);
             EyeTrackingDataChanged?.Invoke(data);
         }
@@ -145,6 +164,12 @@ namespace Cineon.ELE.Utils
             return new Vector3(x, y, z);
         }
 
+        Vector3 GetEyeForward(XrSingleEyeGazeDataHTC eyeData)
+        {
+            Quaternion gazeRot = eyeData.gazePose.orientation.ToUnityQuaternion();
+            return (gazeRot * Vector3.forward).normalized;
+        }
+
         /// <summary>
         /// In the update we are getting the Vive Eye Tracking D-+ata.
         /// </summary>
@@ -153,6 +178,72 @@ namespace Cineon.ELE.Utils
             if (eyeTrackingMode == EyeTrackingMode.DummyData)
             {
                 DummyDataProcessor();
+            }
+            else
+            {
+                bool isEyeTrackingEnabled = XR_HTC_eye_tracker.Interop.GetEyeGazeData(out XrSingleEyeGazeDataHTC[] gazes);
+                if (isEyeTrackingEnabled)
+                {
+                    XR_HTC_eye_tracker.Interop.GetEyeGazeData(out XrSingleEyeGazeDataHTC[] out_gazes);
+                    XR_HTC_eye_tracker.Interop.GetEyePupilData(out XrSingleEyePupilDataHTC[] out_pupils);
+                    XR_HTC_eye_tracker.Interop.GetEyeGeometricData(out XrSingleEyeGeometricDataHTC[] out_geometric);
+
+                    leftGaze = out_gazes[(int)XrEyePositionHTC.XR_EYE_POSITION_LEFT_HTC];
+                    rightGaze = out_gazes[(int)XrEyePositionHTC.XR_EYE_POSITION_RIGHT_HTC];
+                    leftPupil = out_pupils[(int)XrEyePositionHTC.XR_EYE_POSITION_LEFT_HTC];
+                    rightPupil = out_pupils[(int)XrEyePositionHTC.XR_EYE_POSITION_RIGHT_HTC];
+
+                    EyeDataStorage.EyeDataCollection data = new EyeDataStorage.EyeDataCollection();
+                    EyeDataStorage.Head headData = data.head;
+                    headData.Direction.Add(head.forward);
+                    headData.Position.Add(head.position);
+
+                    data.timestamp.Add(DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffffK"));
+                    EyeDataStorage.Eye eye = data.eye;
+
+                    //Vector3 leftGazeVec = leftGaze.gazePose.position.ToUnityVector();
+                    //Vector3 rightGazeVec = rightGaze.gazePose.position.ToUnityVector();
+
+                    //Vector3 leftEyeLocal = Quaternion.Inverse(head.rotation) * (leftGazeVec - head.position);
+                    //Vector3 rightEyeLocal = Quaternion.Inverse(head.rotation) * (rightGazeVec - head.position);
+                    Vector3 leftGazeForward = GetEyeForward(leftGaze);
+                    Vector3 rightGazeForward = GetEyeForward(rightGaze);
+
+                    // If z is positive, flip to negative
+                    if (leftGazeForward.z > 0)
+                        leftGazeForward.z = -leftGazeForward.z;
+                    if (rightGazeForward.z > 0)
+                        rightGazeForward.z = -rightGazeForward.z;
+
+                    Vector3 combinedGazeForward = (leftGazeForward + rightGazeForward).normalized;
+                    Vector3 localCombinedForward = head.InverseTransformDirection(combinedGazeForward);
+
+                    if (UniEyeDebugger != null && lineRenderer != null)
+                    {
+                        lineRenderer.positionCount = 2;
+                        lineRenderer.SetPosition(0, UniEyeDebugger.position);
+                        lineRenderer.SetPosition(1, UniEyeDebugger.position + combinedGazeForward * raycastDistance);
+                        lineRenderer.startColor = rayColour;
+                        lineRenderer.endColor = rayColour;
+                    }
+
+                    eye.GazeDirection.Add(localCombinedForward);
+
+                    // eye.GazeDepth.Add(Vector3.Distance(head.position, (leftGazeVec + rightGazeVec) / 2f));
+                    eye.GazeObject.Add(currentGazedAtObject);
+                    eye.PupilDiameter.Add((leftPupil.pupilDiameter + rightPupil.pupilDiameter) / 2f);
+
+                    leftGeometricData = out_geometric[(int)XrEyePositionHTC.XR_EYE_POSITION_LEFT_HTC];
+                    rightGeometricData = out_geometric[(int)XrEyePositionHTC.XR_EYE_POSITION_RIGHT_HTC];
+                    eye.Openness.Add((leftGeometricData.eyeOpenness + rightGeometricData.eyeOpenness) / 2f);
+
+                    if (isRecording)
+                    {
+                        EyeDataStorage.Instance.UpdateEyeData(data);
+                    }
+                    EyeTrackingDataChanged?.Invoke(data);
+
+                }
             }
             // else
             // {
