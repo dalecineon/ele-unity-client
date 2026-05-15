@@ -48,7 +48,7 @@ namespace Cineon.ELE.Networking
         public ServerType serverType;
         [Space(8)]
         public string customURL = "";
-        private string productionServerURL = "https://ele-api-prod-gateway-v2-1qq3bqcw.nw.gateway.dev";
+        private string productionServerURL = "https://ele-api-gateway-v2-6j0faw0d.nw.gateway.dev";
         public string ServerURL => serverType == ServerType.customURL ? customURL : productionServerURL;
         private string pingPath = "/ping";
         private string inferencePath = "/inference";

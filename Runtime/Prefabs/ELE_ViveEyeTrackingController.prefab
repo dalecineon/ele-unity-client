@@ -340,6 +340,19 @@ MonoBehaviour:
           z: []
         pupilDiameter: []
         openness: []
+      head:
+        direction:
+          x: []
+          y: []
+          z: []
+        position:
+          x: []
+          y: []
+          z: []
+        acceleration:
+          x: []
+          y: []
+          z: []
     temporaryEyeData: []
   responseSets: []
   currentResponseSet:
@@ -365,6 +378,9 @@ MonoBehaviour:
   serverType: 1
   customURL: 
   rollingWindow: 10
+  countdownToNextPush: 0
+  serverResponseTime: 0
+  serverResponseTimes: []
   useOnlyStaticWindows: 0
   startPingOnStart: 0
 --- !u!114 &-2576128706749567977
@@ -382,6 +398,7 @@ MonoBehaviour:
   leftGazeTransform: {fileID: 1509422199960263856}
   rightGazeTransform: {fileID: 7252361177295616558}
   isRecording: 0
+  head: {fileID: 0}
   currentGazedAtObject: null
   eyeTrackingMode: 1
   debugRaycast: 0
@@ -389,6 +406,8 @@ MonoBehaviour:
   raycastDistance: 10
   rayColour: {r: 1, g: 0, b: 0, a: 1}
   lineRenderer: {fileID: 0}
+  UniEyeDebugger: {fileID: 0}
+  uniLineRenderer: {fileID: 0}
 --- !u!114 &8036359752331731206
 MonoBehaviour:
   m_ObjectHideFlags: 0

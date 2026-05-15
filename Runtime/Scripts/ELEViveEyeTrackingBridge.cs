@@ -54,10 +54,12 @@ namespace Cineon.ELE.Utils
         public Color rayColour = Color.red;
         public LineRenderer lineRenderer;
 
+        [Header("Eye Visualization")]
         //This is to show your eye direction.
-        public Transform UniEyeDebugger;
-        public LineRenderer uniLineRenderer;
-        //public Transform rightEyeDebugger;
+        public Transform leftEyeDebugger;
+        public LineRenderer leftEyeLineRenderer;
+        public Transform rightEyeDebugger;
+        public LineRenderer rightEyeLineRenderer;
 
         void Awake()
         {
@@ -178,6 +180,24 @@ namespace Cineon.ELE.Utils
             if (eyeTrackingMode == EyeTrackingMode.DummyData)
             {
                 DummyDataProcessor();
+
+                // Draw dummy lines for left and right eyes
+                if (leftEyeLineRenderer != null && leftGazeTransform != null)
+                {
+                    Vector3 origin = leftGazeTransform.position;
+                    Vector3 direction = leftGazeTransform.forward;
+                    leftEyeLineRenderer.positionCount = 2;
+                    leftEyeLineRenderer.SetPosition(0, origin);
+                    leftEyeLineRenderer.SetPosition(1, origin + direction * raycastDistance);
+                }
+                if (rightEyeLineRenderer != null && rightGazeTransform != null)
+                {
+                    Vector3 origin = rightGazeTransform.position;
+                    Vector3 direction = rightGazeTransform.forward;
+                    rightEyeLineRenderer.positionCount = 2;
+                    rightEyeLineRenderer.SetPosition(0, origin);
+                    rightEyeLineRenderer.SetPosition(1, origin + direction * raycastDistance);
+                }
             }
             else
             {
@@ -201,37 +221,52 @@ namespace Cineon.ELE.Utils
                     data.timestamp.Add(DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffffK"));
                     EyeDataStorage.Eye eye = data.eye;
 
-                    //Vector3 leftGazeVec = leftGaze.gazePose.position.ToUnityVector();
-                    //Vector3 rightGazeVec = rightGaze.gazePose.position.ToUnityVector();
+                    Vector3 leftGazeForward = head.InverseTransformDirection(GetEyeForward(leftGaze));
+                    Vector3 rightGazeForward = head.InverseTransformDirection(GetEyeForward(rightGaze));
 
-                    //Vector3 leftEyeLocal = Quaternion.Inverse(head.rotation) * (leftGazeVec - head.position);
-                    //Vector3 rightEyeLocal = Quaternion.Inverse(head.rotation) * (rightGazeVec - head.position);
-                    Vector3 leftGazeForward = GetEyeForward(leftGaze);
-                    Vector3 rightGazeForward = GetEyeForward(rightGaze);
+                    if (leftGazeForward.z > 0) leftGazeForward.z = -leftGazeForward.z;
+                    if (rightGazeForward.z > 0) rightGazeForward.z = -rightGazeForward.z;
 
-                    // If z is positive, flip to negative
-                    if (leftGazeForward.z > 0)
-                        leftGazeForward.z = -leftGazeForward.z;
-                    if (rightGazeForward.z > 0)
-                        rightGazeForward.z = -rightGazeForward.z;
+                    Vector3 combinedGazeForward = ((leftGazeForward + rightGazeForward) / 2).normalized;
 
-                    Vector3 combinedGazeForward = (leftGazeForward + rightGazeForward).normalized;
-                    Vector3 localCombinedForward = head.InverseTransformDirection(combinedGazeForward);
-
-                    if (UniEyeDebugger != null && lineRenderer != null)
-                    {
-                        lineRenderer.positionCount = 2;
-                        lineRenderer.SetPosition(0, UniEyeDebugger.position);
-                        lineRenderer.SetPosition(1, UniEyeDebugger.position + combinedGazeForward * raycastDistance);
-                        lineRenderer.startColor = rayColour;
-                        lineRenderer.endColor = rayColour;
-                    }
-
-                    eye.GazeDirection.Add(localCombinedForward);
-
-                    // eye.GazeDepth.Add(Vector3.Distance(head.position, (leftGazeVec + rightGazeVec) / 2f));
+                    eye.GazeDirection.Add(combinedGazeForward);
                     eye.GazeObject.Add(currentGazedAtObject);
                     eye.PupilDiameter.Add((leftPupil.pupilDiameter + rightPupil.pupilDiameter) / 2f);
+
+                    // Update left and right eye line renderers using gaze direction in world space
+                    if (leftEyeLineRenderer != null)
+                    {
+                        if (leftGaze.isValid)
+                        {
+                            leftEyeLineRenderer.enabled = true;
+                            // GetEyeForward returns world-space direction, use directly for line renderer
+                            Vector3 leftWorldDir = GetEyeForward(leftGaze);
+                            Vector3 origin = head.position;
+                            leftEyeLineRenderer.positionCount = 2;
+                            leftEyeLineRenderer.SetPosition(0, origin);
+                            leftEyeLineRenderer.SetPosition(1, origin + leftWorldDir * raycastDistance);
+                        }
+                        else
+                        {
+                            leftEyeLineRenderer.enabled = false;
+                        }
+                    }
+                    if (rightEyeLineRenderer != null)
+                    {
+                        if (rightGaze.isValid)
+                        {
+                            rightEyeLineRenderer.enabled = true;
+                            Vector3 rightWorldDir = GetEyeForward(rightGaze);
+                            Vector3 origin = head.position;
+                            rightEyeLineRenderer.positionCount = 2;
+                            rightEyeLineRenderer.SetPosition(0, origin);
+                            rightEyeLineRenderer.SetPosition(1, origin + rightWorldDir * raycastDistance);
+                        }
+                        else
+                        {
+                            rightEyeLineRenderer.enabled = false;
+                        }
+                    }
 
                     leftGeometricData = out_geometric[(int)XrEyePositionHTC.XR_EYE_POSITION_LEFT_HTC];
                     rightGeometricData = out_geometric[(int)XrEyePositionHTC.XR_EYE_POSITION_RIGHT_HTC];
@@ -242,6 +277,7 @@ namespace Cineon.ELE.Utils
                         EyeDataStorage.Instance.UpdateEyeData(data);
                     }
                     EyeTrackingDataChanged?.Invoke(data);
+
 
                 }
             }

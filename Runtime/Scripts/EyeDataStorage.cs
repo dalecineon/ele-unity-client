@@ -420,11 +420,15 @@ namespace Cineon.ELE.Storage
         public List<ResponseSet> responseSets = new List<ResponseSet>();
 
         public ResponseSet currentResponseSet;
-
+        /// <summary>
+        /// This action is used if you want scripts to subscribe to when we get new data from the server and update accordingly.
+        /// </summary>
+        public static Action OnDataUpdated;
         #endregion
 
         [Header("User Defined Settings")]
         public bool debugMode = false;
+        public static string gazeDirectionDebug;
         [Tooltip("The file will be saved to the StreamingAssets folder on the device.")]
         public bool saveDataToFile = false;
 
@@ -519,10 +523,19 @@ namespace Cineon.ELE.Storage
             {
                 Debug.Log($"Eye Data Added at time : {eyeData.timestamp}");
                 Debug.Log($"Gaze Direction : {eyeData.eye.GazeDirection}");
+                if (eyeData.eye.GazeDirection.x.Count > 0)
+                {
+                    int lastDataEntry = eyeData.eye.GazeDirection.x.Count - 1;
+                    gazeDirectionDebug = $"{eyeData.eye.GazeDirection.x[lastDataEntry]}, {eyeData.eye.GazeDirection.y[lastDataEntry]}, {eyeData.eye.GazeDirection.z[lastDataEntry]}";
+                }
+                else
+                {
+                    gazeDirectionDebug = "No gaze data";
+                }
                 //Debug.Log($"Gaze Depth : {eyeData.eye.GazeDepth}");
                 Debug.Log($"Gaze Object : {eyeData.eye.GazeObject}");
                 Debug.Log($"Pupil Diameter : {eyeData.eye.PupilDiameter}");
-                Debug.Log($"Openess : {eyeData.eye.Openness}");
+                Debug.Log($"Openness : {eyeData.eye.Openness}");
                 Debug.Log($"Head Direction : {eyeData.head.Direction}");
                 Debug.Log($"Head Position : {eyeData.head.Position}");
             }
@@ -940,6 +953,8 @@ namespace Cineon.ELE.Storage
 
             currentResponseSet.responseConstructsAverages = constructAveragesList;
             currentResponseSet.responseMetricsAverages = metricAveragesList;
+
+            OnDataUpdated?.Invoke();
         }
 
         public static float GetMetricAverage(EyeDataStorage.MetricsType metricType = MetricsType.fixation_duration_mean)
@@ -995,8 +1010,10 @@ namespace Cineon.ELE.Storage
             };
             string json = JsonConvert.SerializeObject(eyeDataCollectionWrapper, settings);
 
-            // File path
-            string path = Path.Combine(Application.streamingAssetsPath, "eye_tracking.json");
+            // File path with timestamp
+            string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            string filename = $"eye_tracking_{timestamp}.json";
+            string path = Path.Combine(Application.streamingAssetsPath, filename);
 
             // Save file
             File.WriteAllText(path, json);
