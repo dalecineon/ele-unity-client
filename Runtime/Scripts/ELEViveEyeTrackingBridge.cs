@@ -129,16 +129,13 @@ namespace Cineon.ELE.Utils
             EyeDataStorage.Eye eye = data.eye;
             EyeDataStorage.Head headData = data.head;
 
-            // Set dummy head direction and position
             Vector3 dummyHeadPosition = new Vector3(UnityEngine.Random.Range(-0.1f, 0.1f), UnityEngine.Random.Range(1.5f, 1.7f), UnityEngine.Random.Range(-0.1f, 0.1f));
             Vector3 dummyHeadDirection = CreateRandomUnitVector(true);
             headData.Position.Add(dummyHeadPosition);
             headData.Direction.Add(dummyHeadDirection);
 
-            // Set dummy values for all eye properties
             Vector3 gazeDir = CreateRandomUnitVector(true);
             eye.GazeDirection.Add(gazeDir);
-            //eye.GazeDepth.Add(UnityEngine.Random.Range(0.5f, 2f));
             eye.GazeObject.Add(currentGazedAtObject);
             eye.PupilDiameter.Add(UnityEngine.Random.Range(2f, 8f));
             eye.Openness.Add(UnityEngine.Random.Range(0f, 1f));
@@ -166,6 +163,9 @@ namespace Cineon.ELE.Utils
             return new Vector3(x, y, z);
         }
 
+        ///<summary>
+        /// This will convert the eye gaze data from the Vive format to a forward direction vector in Unity's coordinate system.
+        /// </summary>
         Vector3 GetEyeForward(XrSingleEyeGazeDataHTC eyeData)
         {
             Quaternion gazeRot = eyeData.gazePose.orientation.ToUnityQuaternion();
@@ -173,15 +173,13 @@ namespace Cineon.ELE.Utils
         }
 
         /// <summary>
-        /// In the update we are getting the Vive Eye Tracking D-+ata.
+        /// In the update we are getting the Vive Eye Tracking Data and converting it to our EyeData format, as well as invoking the EyeTrackingDataChanged event for any listeners to update with the new data. We are also doing a debug raycast to show the gaze direction in the scene.
         /// </summary>
         void Update()
         {
             if (eyeTrackingMode == EyeTrackingMode.DummyData)
             {
                 DummyDataProcessor();
-
-                // Draw dummy lines for left and right eyes
                 if (leftEyeLineRenderer != null && leftGazeTransform != null)
                 {
                     Vector3 origin = leftGazeTransform.position;
@@ -233,13 +231,11 @@ namespace Cineon.ELE.Utils
                     eye.GazeObject.Add(currentGazedAtObject);
                     eye.PupilDiameter.Add((leftPupil.pupilDiameter + rightPupil.pupilDiameter) / 2f);
 
-                    // Update left and right eye line renderers using gaze direction in world space
                     if (leftEyeLineRenderer != null)
                     {
                         if (leftGaze.isValid)
                         {
                             leftEyeLineRenderer.enabled = true;
-                            // GetEyeForward returns world-space direction, use directly for line renderer
                             Vector3 leftWorldDir = GetEyeForward(leftGaze);
                             Vector3 origin = head.position;
                             leftEyeLineRenderer.positionCount = 2;
@@ -277,106 +273,9 @@ namespace Cineon.ELE.Utils
                         EyeDataStorage.Instance.UpdateEyeData(data);
                     }
                     EyeTrackingDataChanged?.Invoke(data);
-
-
                 }
             }
-            // else
-            // {
-            //     //Check eye tracking is enabled and if true start recording the data to the EyeData class.
-            //     bool isEyeTrackingEnabled = XR_HTC_eye_tracker.Interop.GetEyeGazeData(out XrSingleEyeGazeDataHTC[] gazes);
-            //     if (isEyeTrackingEnabled)
-            //     {
-            //         //This is for the Eye Gaze Data.
-            //         XR_HTC_eye_tracker.Interop.GetEyeGazeData(out XrSingleEyeGazeDataHTC[] out_gazes);
-            //         leftGaze = out_gazes[(int)XrEyePositionHTC.XR_EYE_POSITION_LEFT_HTC];
-            //         rightGaze = out_gazes[(int)XrEyePositionHTC.XR_EYE_POSITION_RIGHT_HTC];
-
-            //         EyeDataStorage.EyeDataCollection data = new EyeDataStorage.EyeDataCollection();
-            //         data.timestamp = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss.fffffK");
-            //         EyeDataStorage.Eye eye = data.eye;
-
-            //         _leftEye.IsGazeValid = leftGaze.isValid;
-            //         _rightEye.IsGazeValid = rightGaze.isValid;
-
-            //         //Gaze Position
-            //         Vector3 leftGazeVec = leftGaze.gazePose.position.ToUnityVector();
-            //         Vector3 rightGazeVec = rightGaze.gazePose.position.ToUnityVector();
-
-            //         leftGazeTransform.position = leftGazeVec;
-            //         leftGazeTransform.rotation = leftGaze.gazePose.orientation.ToUnityQuaternion();
-            //         rightGazeTransform.position = rightGazeVec;
-            //         rightGazeTransform.rotation = rightGaze.gazePose.orientation.ToUnityQuaternion();
-
-            //         _leftEye.ObjectGazedAt = currentGazedAtObject;
-            //         _rightEye.ObjectGazedAt = currentGazedAtObject;
-
-            //         //Set the Eye Data.
-            //         _leftEye.GazeOrigin.SetPosition(leftGazeVec);
-            //         _rightEye.GazeOrigin.SetPosition(rightGazeVec);
-
-            //         Quaternion leftGazeQuaternion = leftGaze.gazePose.orientation.ToUnityQuaternion();
-            //         Quaternion rightGazeQuaternion = rightGaze.gazePose.orientation.ToUnityQuaternion();
-
-            //         _leftEye.GazeForward.SetPosition(leftGazeQuaternion * Vector3.forward);
-            //         _rightEye.GazeForward.SetPosition(rightGazeQuaternion * Vector3.forward);
-
-            //         //Eye Pupil Data.
-            //         XR_HTC_eye_tracker.Interop.GetEyePupilData(out XrSingleEyePupilDataHTC[] out_pupils);
-            //         leftPupil = out_pupils[(int)XrEyePositionHTC.XR_EYE_POSITION_LEFT_HTC];
-            //         rightPupil = out_pupils[(int)XrEyePositionHTC.XR_EYE_POSITION_RIGHT_HTC];
-            //         _leftEye.PupilDiameter = leftPupil.pupilDiameter;
-            //         _rightEye.PupilDiameter = rightPupil.pupilDiameter;
-
-            //         //Eye Geometric Data.
-            //         XR_HTC_eye_tracker.Interop.GetEyeGeometricData(out XrSingleEyeGeometricDataHTC[] out_geometric);
-            //         leftGeometricData = out_geometric[(int)XrEyePositionHTC.XR_EYE_POSITION_LEFT_HTC];
-            //         rightGeometricData = out_geometric[(int)XrEyePositionHTC.XR_EYE_POSITION_RIGHT_HTC];
-            //         _leftEye.EyeOpenness = leftGeometricData.eyeOpenness;
-            //         _rightEye.EyeOpenness = rightGeometricData.eyeOpenness;
-
-            //         //This only processes data if recording is enabled.
-            //         if (isRecording)
-            //         {
-            //             EyeDataStorage.Instance.UpdateEyeData(data);
-            //         }
-            //         EyeTrackingDataChanged?.Invoke(data);
-            //     }
-            // }
         }
-
-        public RaycastHit? PerformForwardRaycast(Vector3 _origin, Vector3 _direction)
-        {
-            Vector3 origin = _origin;
-            Vector3 direction = _direction;
-            Vector3 endPoint = origin + direction * raycastDistance;
-
-            if (lineRenderer != null)
-            {
-                lineRenderer.positionCount = 2;
-                lineRenderer.SetPosition(0, origin);
-                lineRenderer.SetPosition(1, endPoint);
-                lineRenderer.startColor = rayColour;
-                lineRenderer.endColor = rayColour;
-            }
-            else
-            {
-                Debug.LogWarning("No Line renderer Assigned.");
-            }
-
-            // Draw the ray in Scene view
-            Debug.DrawRay(origin, direction * raycastDistance, rayColour);
-
-            // Perform the raycast
-            if (Physics.Raycast(origin, direction, out RaycastHit hitInfo, raycastDistance))
-            {
-                Debug.Log("Raycast hit: " + hitInfo.collider.name);
-                return hitInfo;
-            }
-
-            return null;
-        }
-
     }
 }
 #endif
