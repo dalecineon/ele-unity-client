@@ -351,7 +351,6 @@ namespace Cineon.ELE.Storage
             public List<ConstructType> constructs = new List<ConstructType>();
             [JsonProperty("metrics")]
             public List<MetricsType> metrics = new List<MetricsType>();
-            [JsonIgnore]
             [JsonProperty("models")]
             public List<string> models = new List<string>();
             //This is a feature that will be added at a later date.
