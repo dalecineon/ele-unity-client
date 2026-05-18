@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.IO;
 using System;
+using Cineon.ELE.Networking;
 
 namespace Cineon.ELE.DownloadHelper
 {
@@ -45,7 +46,11 @@ namespace Cineon.ELE.DownloadHelper
                     NamingStrategy = new SnakeCaseNamingStrategy()
                 },
                 NullValueHandling = NullValueHandling.Ignore,
-                Formatting = Formatting.Indented
+                Formatting = Formatting.Indented,
+                Converters = new List<JsonConverter>
+                    {
+                        new LowercaseEnumConverter()
+                    }
             };
             string json = JsonConvert.SerializeObject(data, settings);
             string baseFileName = !string.IsNullOrEmpty(fileName) ? fileName : "data";
