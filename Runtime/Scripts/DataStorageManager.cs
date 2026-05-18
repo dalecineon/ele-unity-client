@@ -48,7 +48,12 @@ namespace Cineon.ELE.DownloadHelper
                 Formatting = Formatting.Indented
             };
             string json = JsonConvert.SerializeObject(data, settings);
-            string _fileName = !string.IsNullOrEmpty(fileName) ? $"{fileName}.json" : "data.json";
+            string baseFileName = !string.IsNullOrEmpty(fileName) ? fileName : "data";
+            if (timeStampedFileName)
+            {
+                baseFileName = $"{baseFileName}_{DateTime.Now:yyyyMMdd_HHmmssfff}";
+            }
+            string _fileName = $"{baseFileName}.json";
             string fullFilePath = Path.Combine(targetFolder, _fileName);
             List<T> jsonDataList = new List<T>();
             if (File.Exists(fullFilePath))

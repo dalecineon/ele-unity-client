@@ -477,6 +477,7 @@ namespace Cineon.ELE.Storage
         public static string gazeDirectionDebug;
         [Tooltip("The file will be saved to the StreamingAssets folder on the device.")]
         public bool saveDataToFile = false;
+        public bool saveEyeDataEveryPush = false;
 
         /// <summary>
         /// In the awake we setup the instance for the script
@@ -887,6 +888,10 @@ namespace Cineon.ELE.Storage
             if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
             {
                 eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
+                if (saveEyeDataEveryPush)
+                {
+                    DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, Application.streamingAssetsPath, "EyeDataCollection",null,true);
+                }
             }
         }
 
@@ -936,6 +941,10 @@ namespace Cineon.ELE.Storage
             if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
             {
                 eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
+                if (saveEyeDataEveryPush)
+                {
+                    DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, Application.streamingAssetsPath, "EyeDataCollection",null,true);
+                }
             }
         }
 
