@@ -130,11 +130,11 @@ namespace Cineon.ELE.Utils
             EyeDataStorage.Head headData = data.head;
 
             Vector3 dummyHeadPosition = new Vector3(UnityEngine.Random.Range(-0.1f, 0.1f), UnityEngine.Random.Range(1.5f, 1.7f), UnityEngine.Random.Range(-0.1f, 0.1f));
-            Vector3 dummyHeadDirection = CreateRandomUnitVector(true);
+            Vector3 dummyHeadDirection = DirectionalDummyHeadInput();
             headData.Position.Add(dummyHeadPosition);
             headData.Direction.Add(dummyHeadDirection);
 
-            Vector3 gazeDir = CreateRandomUnitVector(true);
+            Vector3 gazeDir = CreateRandomUnitVector();
             eye.GazeDirection.Add(gazeDir);
             eye.GazeObject.Add(currentGazedAtObject);
             eye.PupilDiameter.Add(UnityEngine.Random.Range(2f, 8f));
@@ -145,22 +145,39 @@ namespace Cineon.ELE.Utils
                 Debug.Log($"Dummy EyeData: GazeDirection=({gazeDir.x:F4},{gazeDir.y:F4},{gazeDir.z:F4}), GazeObject={eye.GazeObject[0]}, PupilDiameter={eye.PupilDiameter[0]}, Openness={eye.Openness[0]}, HeadPosition=({dummyHeadPosition.x:F2},{dummyHeadPosition.y:F2},{dummyHeadPosition.z:F2}), HeadDirection=({dummyHeadDirection.x:F2},{dummyHeadDirection.y:F2},{dummyHeadDirection.z:F2})");
             }
 
-            EyeDataStorage.Instance.UpdateEyeData(data);
+            if (isRecording)
+            {
+                EyeDataStorage.Instance.UpdateEyeData(data);
+            }
             EyeTrackingDataChanged?.Invoke(data);
         }
 
-        public Vector3 CreateRandomUnitVector(bool forward = false)
+        /// <summary>
+        /// This creates random eye forward direction movement and the z is always a minus value.
+        /// </summary>
+        /// <returns></returns>
+        public Vector3 CreateRandomUnitVector()
         {
-            float azimin = forward ? -Mathf.PI / 2f : -Mathf.PI;
-            float azimax = forward ? Mathf.PI / 2f : Mathf.PI;
+            float azimin = Mathf.PI / 2f;
+            float azimax = 3f * Mathf.PI / 2f;
             float azimuth = UnityEngine.Random.Range(azimin, azimax);
             float sinElevation = UnityEngine.Random.Range(-1f, 1f);
-
             float cosElevation = Mathf.Sqrt(1f - sinElevation * sinElevation);
             float x = cosElevation * Mathf.Sin(azimuth);
             float y = sinElevation;
             float z = cosElevation * Mathf.Cos(azimuth);
             return new Vector3(x, y, z);
+        }
+
+        /// <summary>
+        /// This is to generate some dummy head movement.
+        /// </summary>
+        /// <returns></returns>
+        Vector3 DirectionalDummyHeadInput()
+        {
+            float yaw = UnityEngine.Random.value < 0.8f ? UnityEngine.Random.Range(-25f, 25f) : UnityEngine.Random.Range(-60f, 60f);
+            float pitch = UnityEngine.Random.value < 0.85f ? UnityEngine.Random.Range(-10f, 10f) : UnityEngine.Random.Range(-25f, 25f);
+            return Quaternion.Euler(pitch, yaw, 0f) * Vector3.forward;
         }
 
         ///<summary>
@@ -195,6 +212,11 @@ namespace Cineon.ELE.Utils
                     rightEyeLineRenderer.positionCount = 2;
                     rightEyeLineRenderer.SetPosition(0, origin);
                     rightEyeLineRenderer.SetPosition(1, origin + direction * raycastDistance);
+                }
+                if (debugRaycast)
+                {
+                    Vector3 dir = CreateRandomUnitVector();
+                    Debug.DrawRay(Camera.main.transform.position, dir * 5, Color.red);
                 }
             }
             else
@@ -263,11 +285,9 @@ namespace Cineon.ELE.Utils
                             rightEyeLineRenderer.enabled = false;
                         }
                     }
-
                     leftGeometricData = out_geometric[(int)XrEyePositionHTC.XR_EYE_POSITION_LEFT_HTC];
                     rightGeometricData = out_geometric[(int)XrEyePositionHTC.XR_EYE_POSITION_RIGHT_HTC];
                     eye.Openness.Add((leftGeometricData.eyeOpenness + rightGeometricData.eyeOpenness) / 2f);
-
                     if (isRecording)
                     {
                         EyeDataStorage.Instance.UpdateEyeData(data);
