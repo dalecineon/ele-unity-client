@@ -11,6 +11,10 @@ namespace Cineon.ELE.Utils
     {
         [SerializeField]
         private bool startCaptureOnStart = false; //Set this to true if you want to start the capture process on the start.
+        
+        private static bool isRecording = false; // Tracks whether recording is in progress.
+
+        public static bool IsRecording => isRecording; // Public getter for the recording state.
 
         /// <summary>
         /// In the start we check to see if the user wants to start the capture process immediately, if so we call the StartCapture function.
@@ -28,7 +32,11 @@ namespace Cineon.ELE.Utils
         /// </summary>
         public static void StartCapture()
         {
-            ELEViveEyeTrackingBridge.RecordingStateChanged?.Invoke(ELEViveEyeTrackingBridge.RecordingState.Start);
+            if (!isRecording) // Prevent redundant state changes.
+            {
+                isRecording = true;
+                ELEViveEyeTrackingBridge.RecordingStateChanged?.Invoke(ELEViveEyeTrackingBridge.RecordingState.Start);
+            }
         }
 
         /// <summary>
@@ -36,7 +44,11 @@ namespace Cineon.ELE.Utils
         /// </summary>
         public static void StopCapture()
         {
-            ELEViveEyeTrackingBridge.RecordingStateChanged?.Invoke(ELEViveEyeTrackingBridge.RecordingState.Stop);
+            if (isRecording) // Prevent redundant state changes.
+            {
+                isRecording = false;
+                ELEViveEyeTrackingBridge.RecordingStateChanged?.Invoke(ELEViveEyeTrackingBridge.RecordingState.Stop);
+            }
         }
 
     }
