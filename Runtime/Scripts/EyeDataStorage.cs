@@ -414,6 +414,53 @@ namespace Cineon.ELE.Storage
             public List<ResponseContainer> responseCollection;
             public List<ResponseConstructsAverages> responseConstructsAverages;
             public List<ResponseMetricsAverages> responseMetricsAverages;
+
+            public enum Aggregates
+            {
+                Min,
+                Max,
+                Average
+            }
+
+            /// <summary>
+            /// This is a helper function so you can easily get min, max and average data.
+            /// </summary>
+            /// <param name="aggregates"></param>
+            /// <returns></returns>
+            public float GetAggregates(Aggregates aggregates)
+            {
+                if (aggregates == Aggregates.Average)
+                {
+                    float sum = 0f;
+                    float count = 0;
+                    foreach (ResponseContainer container in responseCollection)
+                    {
+                        foreach (ResponseData data in container.data)
+                        {
+                            sum += (float)data.score;
+                            count++;
+                        }
+                    }
+                    if (count == 0) return 0f;
+                    return (float)System.Math.Round(sum / count, 2);
+                }
+                else
+                {
+                    float aggregatesValue = aggregates == Aggregates.Min ? float.MaxValue : float.MinValue;
+                    foreach (ResponseContainer container in responseCollection)
+                    {
+                        foreach (ResponseData data in container.data)
+                        {
+                            if((aggregates == Aggregates.Min && data.score < aggregatesValue) || (aggregates == Aggregates.Max && data.score > aggregatesValue))
+                            {
+                                aggregatesValue = (float)data.score;
+                            }
+                        }
+                    }
+                    return (float)System.Math.Round(aggregatesValue, 2);
+                }
+            }
+
         }
 
         public List<ResponseSet> responseSets = new List<ResponseSet>();
