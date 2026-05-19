@@ -281,6 +281,8 @@ namespace Cineon.ELE.Networking
         {
             Debug.Log($"Starting the eye data collection.");
             isFirstCollection = true;
+            serverResponseTime = 0f;
+            serverResponseTimes.Clear();
             eyeDataStorage.ClearAllData();
             eyeDataStorage.CreateResponseSet();
             rollingWindowRoutine = StartCoroutine(WaitForEyeDataCollection(initialWindowLength, RetrieveEyeData));
