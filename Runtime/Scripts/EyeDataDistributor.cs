@@ -323,9 +323,9 @@ namespace Cineon.ELE.Networking
         /// This will check the server and respond true or false if the ping is successful. This is used in the CineonRestClient script to check if the server is active or not.
         /// </summary>
         /// <returns></returns>
-        public async Task<(bool live, float ping)> IsServerLive()
+        public async Task<(bool live, float ping)> IsServerLive(int attempts = 1)
         {
-            return await CineonRestClient.CheckServer($"{ServerURL}{pingPath}",5);
+            return await CineonRestClient.CheckServer($"{ServerURL}{pingPath}",attempts);
         }
 
         /// <summary>
