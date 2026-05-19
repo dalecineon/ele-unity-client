@@ -426,37 +426,45 @@ namespace Cineon.ELE.Storage
             /// This is a helper function so you can easily get min, max and average data.
             /// </summary>
             /// <param name="aggregates"></param>
+            /// <param name="predictionName">Optional filter to only aggregate scores for a specific prediction (e.g. "stress", "workload").</param>
             /// <returns></returns>
-            public float GetAggregates(Aggregates aggregates)
+            public float GetAggregates(Aggregates aggregates, string predictionName = null, float decimalPlaces = 2)
             {
+                if (responseCollection == null || responseCollection.Count == 0) return 0f;
+
                 if (aggregates == Aggregates.Average)
                 {
                     float sum = 0f;
-                    float count = 0;
+                    int count = 0;
                     foreach (ResponseContainer container in responseCollection)
                     {
                         foreach (ResponseData data in container.data)
                         {
+                            if (predictionName != null && data.prediction != predictionName) continue;
                             sum += (float)data.score;
                             count++;
                         }
                     }
                     if (count == 0) return 0f;
-                    return (float)System.Math.Round(sum / count, 2);
+                    return (float)System.Math.Round(sum / count, (int)decimalPlaces);
                 }
                 else
                 {
                     float aggregatesValue = aggregates == Aggregates.Min ? float.MaxValue : float.MinValue;
+                    bool found = false;
                     foreach (ResponseContainer container in responseCollection)
                     {
                         foreach (ResponseData data in container.data)
                         {
-                            if((aggregates == Aggregates.Min && data.score < aggregatesValue) || (aggregates == Aggregates.Max && data.score > aggregatesValue))
+                            if (predictionName != null && data.prediction != predictionName) continue;
+                            found = true;
+                            if ((aggregates == Aggregates.Min && data.score < aggregatesValue) || (aggregates == Aggregates.Max && data.score > aggregatesValue))
                             {
                                 aggregatesValue = (float)data.score;
                             }
                         }
                     }
+                    if (!found) return 0f;
                     return (float)System.Math.Round(aggregatesValue, 2);
                 }
             }
