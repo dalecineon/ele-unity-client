@@ -427,9 +427,10 @@ namespace Cineon.ELE.Storage
             /// </summary>
             /// <param name="aggregates"></param>
             /// <param name="predictionName">Optional filter to only aggregate scores for a specific prediction (e.g. "stress", "workload").</param>
-            /// <returns></returns>
-            public float GetAggregates(Aggregates aggregates, string predictionName = null, float decimalPlaces = 2)
+            /// <param name="decimalPlaces">This is the number of decimal places you want (0-4Max).</param>
+            public float GetAggregates(Aggregates aggregates, string predictionName = null, int decimalPlaces = 2)
             {
+                decimalPlaces = Mathf.Clamp(decimalPlaces,0,4);
                 if (responseCollection == null || responseCollection.Count == 0) return 0f;
 
                 if (aggregates == Aggregates.Average)
@@ -446,7 +447,7 @@ namespace Cineon.ELE.Storage
                         }
                     }
                     if (count == 0) return 0f;
-                    return (float)System.Math.Round(sum / count, (int)decimalPlaces);
+                    return (float)System.Math.Round(sum / count, decimalPlaces,MidpointRounding.AwayFromZero);
                 }
                 else
                 {
@@ -465,7 +466,7 @@ namespace Cineon.ELE.Storage
                         }
                     }
                     if (!found) return 0f;
-                    return (float)System.Math.Round(aggregatesValue, 2);
+                    return (float)System.Math.Round(aggregatesValue, decimalPlaces,MidpointRounding.AwayFromZero);
                 }
             }
 
