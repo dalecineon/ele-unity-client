@@ -63,6 +63,21 @@ namespace Cineon.ELE.Storage
             fixation_pitch_dispersion_std
         }
 
+        public enum CustomModels
+        {
+            stress_heuristic,
+            StressCrossFormer,
+            stress_random,
+            stress_heuristic_original,
+            workload_heuristic,
+            WorkloadCrossFormer,
+            workload_random,
+            fatigue_heuristic,
+            FatigueCrossFormer,
+            fatigue_random,
+            fatigue_heuristic_original
+        }
+
         #region Eye Data Collection
         [Serializable]
         public class ClientInfo
@@ -352,10 +367,7 @@ namespace Cineon.ELE.Storage
             [JsonProperty("metrics")]
             public List<MetricsType> metrics = new List<MetricsType>();
             [JsonProperty("models")]
-            public List<string> models = new List<string>();
-            //This is a feature that will be added at a later date.
-            //[JsonProperty("models")]
-            //public List<string> models = new List<string>();
+            public List<CustomModels> models = new List<CustomModels>();
             [JsonProperty("device")]
             public string device;
             [JsonProperty("client")]
@@ -430,7 +442,7 @@ namespace Cineon.ELE.Storage
             /// <param name="decimalPlaces">This is the number of decimal places you want (0-4Max).</param>
             public float GetAggregates(Aggregates aggregates, string predictionName = null, int decimalPlaces = 2)
             {
-                decimalPlaces = Mathf.Clamp(decimalPlaces,0,4);
+                decimalPlaces = Mathf.Clamp(decimalPlaces, 0, 4);
                 if (responseCollection == null || responseCollection.Count == 0) return 0f;
 
                 if (aggregates == Aggregates.Average)
@@ -447,7 +459,7 @@ namespace Cineon.ELE.Storage
                         }
                     }
                     if (count == 0) return 0f;
-                    return (float)System.Math.Round(sum / count, decimalPlaces,MidpointRounding.AwayFromZero);
+                    return (float)System.Math.Round(sum / count, decimalPlaces, MidpointRounding.AwayFromZero);
                 }
                 else
                 {
@@ -466,7 +478,7 @@ namespace Cineon.ELE.Storage
                         }
                     }
                     if (!found) return 0f;
-                    return (float)System.Math.Round(aggregatesValue, decimalPlaces,MidpointRounding.AwayFromZero);
+                    return (float)System.Math.Round(aggregatesValue, decimalPlaces, MidpointRounding.AwayFromZero);
                 }
             }
 
@@ -899,7 +911,7 @@ namespace Cineon.ELE.Storage
                 eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
                 if (saveEyeDataEveryPush)
                 {
-                    DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, Application.streamingAssetsPath, "EyeDataCollection",null,true);
+                    DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, Application.streamingAssetsPath, "EyeDataCollection", null, true);
                 }
             }
         }
@@ -952,7 +964,7 @@ namespace Cineon.ELE.Storage
                 eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
                 if (saveEyeDataEveryPush)
                 {
-                    DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, Application.streamingAssetsPath, "EyeDataCollection",null,true);
+                    DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, Application.streamingAssetsPath, "EyeDataCollection", null, true);
                 }
             }
         }
