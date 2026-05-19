@@ -320,6 +320,16 @@ namespace Cineon.ELE.Networking
         }
 
         /// <summary>
+        /// This will check the server and respond true or false if the ping is successful. This is used in the CineonRestClient script to check if the server is active or not.
+        /// </summary>
+        /// <returns></returns>
+        public bool CheckServer()
+        {
+            CineonRestClient.Ping(this, $"{ServerURL}{pingPath}");
+            return true;
+        }
+
+        /// <summary>
         /// This is used to stop the ping to the server.
         /// </summary>
         private void StopPing()

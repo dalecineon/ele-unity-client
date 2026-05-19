@@ -93,7 +93,41 @@ namespace Cineon.ELE.Networking
                 }
             }
         }
-
+        /// <summary>
+        /// This method checks if a server is live by sending a HEAD request to the specified URL. It attempts to connect to the server a specified number of times (default is 5) and measures the time taken for each attempt. If the server responds successfully, it returns true along with the ping time in milliseconds. If all attempts fail, it returns false and a ping time of -1. This can be used to check if the server is active and to measure the response time.
+        /// </summary>
+        /// <param name="url"></param>
+        /// <param name="attempts"></param>
+        /// <returns></returns>
+        public static async Task<(bool isLive, float pingMs)> CheckServer(string url, int attempts = 5)
+        {
+            attempts = Mathf.Max(1, attempts);
+            for (int i = 0; i < attempts; i++)
+            {
+                try
+                {
+                    float startTime = Time.realtimeSinceStartup;
+                    using UnityWebRequest request = UnityWebRequest.Head(url);
+                    request.timeout = 5;
+                    var operation = request.SendWebRequest();
+                    while (!operation.isDone)
+                    {
+                        await Task.Yield();
+                    }
+                    if (request.result == UnityWebRequest.Result.Success)
+                    {
+                        float pingMs = (Time.realtimeSinceStartup - startTime) * 1000f;
+                        return (true, pingMs);
+                    }
+                }
+                catch
+                {
+                    Debug.LogWarning($"Attempt {i + 1} failed to ping server.");
+                }
+                await Task.Delay(100);
+            }
+            return (false, -1f);
+        }
         /// <summary>
         /// This serializes the data to a JSON string.
         /// </summary>
@@ -124,13 +158,17 @@ namespace Cineon.ELE.Networking
                 throw;
             }
         }
-
+        /// <summary>
+        /// Deserializes a JSON string into an object of type TResponse. It also logs the JSON data for debugging purposes. If the JSON is not in the correct format or if there is an error during deserialization, it will log an error message and invoke the OnServerError event with the error details.
+        /// </summary>
+        /// <typeparam name="TResponse"></typeparam>
+        /// <param name="data"></param>
+        /// <returns></returns>
         private static TResponse DeserializeFromJson<TResponse>(string data)
         {
             Debug.Log(data);
             return JsonConvert.DeserializeObject<TResponse>(data);
         }
-
         /// Starts a coroutine to periodically ping a server at the specified URL.
         /// </summary>
         /// <param name="context">The MonoBehaviour context used to start the coroutine.</param>
@@ -143,7 +181,6 @@ namespace Cineon.ELE.Networking
         {
             pingCoroutine = context.StartCoroutine(PingServer(_url, _pingInterval));
         }
-
         /// <summary>
         /// This pings a server to see if it the server is active and then gives a response time back.
         /// You can also setup a pingInterval and it will ping the server after x amount of seconds.
@@ -192,7 +229,6 @@ namespace Cineon.ELE.Networking
                 }
             } while (_pingInterval > 0);
         }
-
         /// <summary>
         /// This stops the repeating ping.
         /// </summary>
@@ -206,7 +242,9 @@ namespace Cineon.ELE.Networking
             }
         }
     }
-
+    /// <summary>
+    /// This is a custom JsonConverter that converts enum values to lowercase strings when serializing and parses them back to enum values when deserializing. This is useful for ensuring that enum values are consistently formatted in JSON, especially when the API expects lowercase strings.
+    /// </summary>
     public class LowercaseEnumConverter : StringEnumConverter
     {
         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
