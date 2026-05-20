@@ -16,25 +16,21 @@ namespace Cineon.ELE.DownloadHelper
         /// This is a helper function to save an object to a json file on either desktop or android.
         /// We are also converting the json parameter names to snakecase for the ELE API.
         /// </summary>
-        /// <param name="location">This would be either dataPath, PersistentDataPath or StreamingAssets.</param>
+        /// <param name="path">This would be either dataPath, PersistentDataPath or StreamingAssets.</param>
         /// <param name="folderName">A custom name for the folder you wish the data to be stored in.</param>
         /// <param name="fileName">A custom filename for the data file.</param>
         /// <param name="timeStampedFileName">If you want the filename to be timestamped.</param>
-        public static void SaveToJson<T>(T data, string path, string fileName, string folderName = null, bool timeStampedFileName = false)
+        public static void SaveToJson<T>(T data, string path, string fileName, string folderName = "CineonELE", bool timeStampedFileName = false)
         {
             if (string.IsNullOrEmpty(path))
             {
                 path = Application.persistentDataPath;
             }
-            string targetFolder;
-            if (string.IsNullOrEmpty(folderName))
+            if (string.IsNullOrWhiteSpace(folderName))
             {
-                targetFolder = path;
+                folderName = "CineonELE";
             }
-            else
-            {
-                targetFolder = Path.Combine(path, folderName);
-            }
+            string targetFolder = Path.Combine(path, folderName);
             if (!Directory.Exists(targetFolder))
             {
                 Directory.CreateDirectory(targetFolder);

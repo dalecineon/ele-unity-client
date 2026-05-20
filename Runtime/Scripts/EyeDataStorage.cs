@@ -497,8 +497,16 @@ namespace Cineon.ELE.Storage
         public bool debugMode = false;
         public static string gazeDirectionDebug;
         [Tooltip("The file will be saved to the StreamingAssets folder on the device.")]
-        public bool saveDataToFile = false;
-        public bool saveEyeDataEveryPush = false;
+        public bool saveRawEyeData = false;
+
+        /// <summary>
+        /// This is a helper function to get the save path for the eye data json file depending on the platform. On Android it will be saved to persistent data path and on other platforms it will be saved to streaming assets path.
+        /// </summary> 
+        /// <returns>The file path where eye data should be saved.</returns>
+        private static string GetEyeDataSavePath()
+        {
+            return Application.platform == RuntimePlatform.Android ? Application.persistentDataPath : Application.streamingAssetsPath;
+        }
 
         /// <summary>
         /// In the awake we setup the instance for the script
@@ -540,9 +548,9 @@ namespace Cineon.ELE.Storage
             }
             currentResponseSet.responseCollection.Add(response);
 
-            if (saveDataToFile)
+            if (saveRawEyeData)
             {
-                DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, Application.streamingAssetsPath, "EyeDataCollection");
+                DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, GetEyeDataSavePath(), "EyeDataCollection");
             }
         }
 
@@ -909,7 +917,7 @@ namespace Cineon.ELE.Storage
             if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
             {
                 eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
-                if (saveEyeDataEveryPush)
+                if (saveRawEyeData)
                 {
                     DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, Application.streamingAssetsPath, "EyeDataCollection", null, true);
                 }
@@ -962,7 +970,7 @@ namespace Cineon.ELE.Storage
             if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
             {
                 eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
-                if (saveEyeDataEveryPush)
+                if (saveRawEyeData)
                 {
                     DataStorageManager.SaveToJson<EyeDataCollectionWrapper>(eyeDataCollectionWrapper, Application.streamingAssetsPath, "EyeDataCollection", null, true);
                 }
