@@ -176,6 +176,7 @@ namespace Cineon.ELE.Networking
             Debug.Log($"Server URL : {ServerURL.pingURL}");
 
             bool continuous = attempts == 0;
+            Debug.Log($"continuous : {continuous}");
             if (!continuous)
                 attempts = Mathf.Max(1, attempts);
 
