@@ -18,7 +18,7 @@ namespace Cineon.ELE.Networking
         /// </summary>
         private void OnEnable()
         {
-            CineonRestClient.OnPingDetected += PingResponse;
+            CineonRestClient.OnPingUpdated += PingResponse;
         }
 
         /// <summary>
@@ -26,7 +26,7 @@ namespace Cineon.ELE.Networking
         /// </summary>
         private void OnDisable()
         {
-            CineonRestClient.OnPingDetected -= PingResponse;
+            CineonRestClient.OnPingUpdated -= PingResponse;
         }
 
         /// On the start we begin the ping process by invoking the BeginPing event.
@@ -40,15 +40,16 @@ namespace Cineon.ELE.Networking
         /// If ping has been found and the StopPingAfterFirstCheck is true, it will stop the ping and unsubscribe the listener.
         /// </summary>
         /// <param name="isLive">Indicates whether the server is live or not.</param>
-        void PingResponse(bool isLive)
+        /// <param name="pingTime">The ping time in milliseconds.</param>
+        void PingResponse(bool isLive, float pingTime)
         {
             if (isLive)
             {
-                Debug.Log("Ping Found, Stop Ping.");
+                Debug.Log($"Ping Found, Stop Ping. Ping Time: {pingTime} ms");
                 if (StopPingAfterFirstCheck)
                 {
                     EyeDataDistributor.EndPing?.Invoke();
-                    CineonRestClient.OnPingDetected -= PingResponse;
+                    CineonRestClient.OnPingUpdated -= PingResponse;
                 }
             }
             else

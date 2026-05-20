@@ -65,6 +65,7 @@ namespace Cineon.ELE.Networking
         public bool useOnlyStaticWindows = false; //This is used if you don't want to use a rolling window and just send static 10 second windows.
         private bool isFirstCollection = true;
         [SerializeField]
+        [Tooltip("This will allow you to start the ping process at the start of the scene. This is useful to check if the server is live before starting the data collection.")]
         private bool startPingOnStart = false; //This is a bool to start the ping at the start.
 
         #region Event Listeners
@@ -113,6 +114,10 @@ namespace Cineon.ELE.Networking
             {
                 Debug.Log("Using Production Server: " + productionServerURL);
             }
+
+            //Update the base url in the static so you don't have to pass through url on each function;
+            CineonRestClient.ServerURL.BaseURL = ServerURL;
+
             eyeDataStorage = GetComponent<EyeDataStorage>();
         }
 
@@ -129,7 +134,7 @@ namespace Cineon.ELE.Networking
             }
             if (startPingOnStart)
             {
-                StartPing();
+                CineonRestClient.StartPingLoop();
             }
         }
 
@@ -139,9 +144,6 @@ namespace Cineon.ELE.Networking
         private void OnEnable()
         {
             CineonRestClient.OnServerError += ServerErrorResponse;
-            CineonRestClient.OnPingDetected += PingResponse;
-            BeginPing += StartPing;
-            EndPing += StopPing;
             StartDataCapture += StartEyeDataCollection;
             StopDataCapture += StopEyeDataCollection;
         }
@@ -152,9 +154,6 @@ namespace Cineon.ELE.Networking
         private void OnDisable()
         {
             CineonRestClient.OnServerError -= ServerErrorResponse;
-            CineonRestClient.OnPingDetected -= PingResponse;
-            BeginPing -= StartPing;
-            EndPing -= StopPing;
             StartDataCapture -= StartEyeDataCollection;
             StopDataCapture -= StopEyeDataCollection;
         }
@@ -257,7 +256,7 @@ namespace Cineon.ELE.Networking
             int requestId = ++requestCounter;
             Debug.Log($"[EyeDataDistributor] #{requestId} Sending data to server...");
             float startTime = Time.realtimeSinceStartup;
-            EyeDataStorage.ResponseContainer response = await CineonRestClient.Post<EyeDataStorage.EyeDataCollectionWrapper, EyeDataStorage.ResponseContainer>($"{ServerURL}{inferencePath}", eyeDataStorage.eyeDataCollectionWrapper);
+            EyeDataStorage.ResponseContainer response = await CineonRestClient.Post<EyeDataStorage.EyeDataCollectionWrapper, EyeDataStorage.ResponseContainer>(eyeDataStorage.eyeDataCollectionWrapper);
             float elapsed = Time.realtimeSinceStartup - startTime;
             serverResponseTime = elapsed;
             serverResponseTimes.Add(new ServerResponseEntry(requestId, elapsed));
@@ -296,48 +295,5 @@ namespace Cineon.ELE.Networking
             Debug.Log($"Stopping the eye data collection.");
             StopCoroutine(rollingWindowRoutine);
         }
-
-        /// <summary>
-        /// This is a function that gets fired when the ping is detected.
-        /// </summary>
-        /// <param name="isActive">The CineonRestAPI will respond with true or false on whether a ping to the server worked.</param>
-        private void PingResponse(bool isActive)
-        {
-            Debug.Log($"Is Ping active : {isActive}");
-            if (isActive && isServerReady == false)
-            {
-                isServerReady = true;
-                OnServerReady?.Invoke();
-            }
-        }
-
-        /// <summary>
-        /// This starts a ping to the server to check the connection.
-        /// </summary>
-        /// <param name="pingIntervalTime">This is how often you want the ping to happen</param>
-        private void StartPing(int pingIntervalTime = 0)
-        {
-            Debug.Log("Start Ping.");
-            CineonRestClient.Ping(this, $"{ServerURL}{pingPath}", pingIntervalTime);
-        }
-
-        /// <summary>
-        /// This will check the server and respond true or false if the ping is successful. This is used in the CineonRestClient script to check if the server is active or not.
-        /// </summary>
-        /// <returns></returns>
-        public async Task<(bool live, float ping)> IsServerLive(int attempts = 1)
-        {
-            return await CineonRestClient.CheckServer($"{ServerURL}{pingPath}",attempts);
-        }
-
-        /// <summary>
-        /// This is used to stop the ping to the server.
-        /// </summary>
-        private void StopPing()
-        {
-            CineonRestClient.StopPing(this);
-        }
-
     }
-
 }

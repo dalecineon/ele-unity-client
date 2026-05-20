@@ -8,17 +8,28 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Collections.Generic;
 using Newtonsoft.Json.Converters;
+using System.Threading;
 
 namespace Cineon.ELE.Networking
 {
     public static class CineonRestClient
     {
-        private static Coroutine pingCoroutine;
         public static Action<string> OnServerError; //This is an event which any script can subscribe to, to get error responses from the Cineon Rest Client.
-        public static Action<bool> OnPingDetected; //This event is fired when a ping is detected, this maybe after a certain amount of time.
+        public static Action<bool, float> OnPingUpdated; //This event is fired when a ping is detected, this maybe after a certain amount of time. It also gives the ping time in milliseconds.
+        private static CancellationTokenSource pingCancellationTokenSource; //This is used to cancel the ping coroutine when needed.
         public static string version = "1.0.0"; //This is the version of the Cineon Rest Client.
         public static string platform = Application.platform.ToString(); //This is the platform of the Cineon Rest Client.
 
+        /// <summary>
+        /// Store the url endpoints for the server.
+        /// </summary>
+        public static class ServerURL
+        {
+            public static string BaseURL;
+            public static string pingURL => $"{BaseURL}/ping";
+        }
+
+        #region POST Request Functionality
         /// <summary>
         /// Sends Json Data to a server using a post request. 
         /// The Json Data must be sent in the correct format to get a response.
@@ -26,16 +37,15 @@ namespace Cineon.ELE.Networking
         /// </summary>
         /// <typeparam name="TRequest">A Generic Request class, but needs to be setup in the way the rest API needs it. Check the documents above.</typeparam>
         /// <typeparam name="TResponse">A Generic Response class, but needs to be setup in the way the rest API needs it. Check the documents above.</typeparam>
-        /// <param name="_url">Chosen Server Url</param>
         /// <param name="_data">Json Data</param>
         /// <returns>A TResponse which can be used to populate a class.</returns>
-        public static async Task<TResponse> Post<TRequest, TResponse>(string _url, TRequest _data)
+        public static async Task<TResponse> Post<TRequest, TResponse>(TRequest _data)
         {
             string json = SerializeToJson(_data);
             Debug.Log($"Serialized JSON: {json}");
-            using (UnityWebRequest request = new UnityWebRequest(_url, "POST"))
+            using (UnityWebRequest request = new UnityWebRequest(ServerURL.BaseURL, "POST"))
             {
-                Debug.Log(_url);
+                Debug.Log(ServerURL.BaseURL);
                 byte[] rawBody = Encoding.UTF8.GetBytes(json);
                 request.uploadHandler = new UploadHandlerRaw(rawBody);
                 request.downloadHandler = new DownloadHandlerBuffer();
@@ -93,41 +103,10 @@ namespace Cineon.ELE.Networking
                 }
             }
         }
-        /// <summary>
-        /// This method checks if a server is live by sending a HEAD request to the specified URL. It attempts to connect to the server a specified number of times (default is 5) and measures the time taken for each attempt. If the server responds successfully, it returns true along with the ping time in milliseconds. If all attempts fail, it returns false and a ping time of -1. This can be used to check if the server is active and to measure the response time.
-        /// </summary>
-        /// <param name="url"></param>
-        /// <param name="attempts"></param>
-        /// <returns></returns>
-        public static async Task<(bool isLive, float pingMs)> CheckServer(string url, int attempts = 5)
-        {
-            attempts = Mathf.Max(1, attempts);
-            for (int i = 0; i < attempts; i++)
-            {
-                try
-                {
-                    float startTime = Time.realtimeSinceStartup;
-                    using UnityWebRequest request = UnityWebRequest.Get(url);
-                    request.timeout = 5;
-                    var operation = request.SendWebRequest();
-                    while (!operation.isDone)
-                    {
-                        await Task.Yield();
-                    }
-                    if (request.result == UnityWebRequest.Result.Success)
-                    {
-                        float pingMs = (Time.realtimeSinceStartup - startTime) * 1000f;
-                        return (true, pingMs);
-                    }
-                }
-                catch
-                {
-                    Debug.LogWarning($"Attempt {i + 1} failed to ping server.");
-                }
-                await Task.Delay(100);
-            }
-            return (false, -1f);
-        }
+
+        #endregion
+
+        #region Serialization and Deserialization
         /// <summary>
         /// This serializes the data to a JSON string.
         /// </summary>
@@ -169,78 +148,91 @@ namespace Cineon.ELE.Networking
             Debug.Log(data);
             return JsonConvert.DeserializeObject<TResponse>(data);
         }
-        /// Starts a coroutine to periodically ping a server at the specified URL.
-        /// </summary>
-        /// <param name="context">The MonoBehaviour context used to start the coroutine.</param>
-        /// <param name="_url">The URL of the server to ping.</param>
-        /// <param name="_pingInterval">The interval in seconds between pings. If set to 0, the default interval is used.</param>
-        /// This pings a server to see if it the server is active and then gives a response time back.
-        /// You can also setup a pingInterval and it will ping the server after x amount of seconds.
-        /// </summary>
-        public static void Ping(MonoBehaviour context, string _url, int _pingInterval = 0)
-        {
-            pingCoroutine = context.StartCoroutine(PingServer(_url, _pingInterval));
-        }
+
+        #endregion
+
+        #region Ping Functionality
         /// <summary>
-        /// This pings a server to see if it the server is active and then gives a response time back.
-        /// You can also setup a pingInterval and it will ping the server after x amount of seconds.
+        /// This method checks if a server is live by sending a HEAD request to the specified URL. It attempts to connect to the server a specified number of times (default is 5) and measures the time taken for each attempt. If the server responds successfully, it returns true along with the ping time in milliseconds. If all attempts fail, it returns false and a ping time of -1. This can be used to check if the server is active and to measure the response time.
         /// </summary>
-        /// <param name="_url">This is the url of the server you want to check the ping on.</param>
-        /// <param name="pingInterval">This is how often you wish to ping the server to check a connection.</param>
-        public static IEnumerator PingServer(string _url, int _pingInterval = 0)
+        /// <param name="attempts"></param>
+        /// <returns></returns>
+        public static async Task<(bool isLive, float pingMs)> CheckServer(int attempts = 5)
         {
-            do
+            attempts = Mathf.Max(1, attempts);
+            for (int i = 0; i < attempts; i++)
             {
-                float startTime = Time.time;
-                float timeout = 5f;
-                using (UnityWebRequest request = UnityWebRequest.Get(_url))
+                try
                 {
-                    request.SetRequestHeader("x-api-key", EyeDataDistributor.Instance.apiKey);
-                    yield return request.SendWebRequest();
-                    while (!request.isDone && Time.time - startTime < timeout)
+                    float startTime = Time.realtimeSinceStartup;
+                    using UnityWebRequest request = UnityWebRequest.Get(ServerURL.BaseURL);
+                    request.timeout = 5;
+                    var operation = request.SendWebRequest();
+                    while (!operation.isDone)
                     {
-                        OnPingDetected?.Invoke(false);
-                        yield return null;
+                        await Task.Yield();
                     }
-                    switch (request.result)
+                    if (request.result == UnityWebRequest.Result.Success)
                     {
-                        case UnityWebRequest.Result.ConnectionError:
-                        case UnityWebRequest.Result.DataProcessingError:
-                            OnPingDetected?.Invoke(false);
-                            Debug.LogError($"Error: {request.error}");
-                            break;
-                        case UnityWebRequest.Result.ProtocolError:
-                            OnPingDetected?.Invoke(false);
-                            Debug.LogError($"HTTP Error: {request.error}");
-                            break;
-                        case UnityWebRequest.Result.Success:
-                            OnPingDetected?.Invoke(true);
-                            Debug.Log($"Success {request.downloadHandler.text}");
-                            break;
-                    }
-                    if (request.isDone)
-                    {
-                        Debug.Log($"Ping to {_url}");
-                    }
-                    if (_pingInterval > 0)
-                    {
-                        yield return new WaitForSeconds(_pingInterval);
+                        float pingMs = (Time.realtimeSinceStartup - startTime) * 1000f;
+                        return (true, pingMs);
                     }
                 }
-            } while (_pingInterval > 0);
+                catch
+                {
+                    Debug.LogWarning($"Attempt {i + 1} failed to ping server.");
+                }
+                if (i < attempts - 1)
+                    await Task.Delay(100);
+            }
+            return (false, -1f);
         }
         /// <summary>
-        /// This stops the repeating ping.
+        /// This method pings the server once to check the server is live and awake.
         /// </summary>
-        /// <param name="context">The MonoBehaviour context used to start the coroutine.</param>
-        public static void StopPing(MonoBehaviour context)
+        public static void PingOnce()
         {
-            if (context != null)
+            Task.Run(async () =>
             {
-                OnPingDetected?.Invoke(false);
-                context.StopCoroutine(pingCoroutine);
-            }
+                var (isLive, pingMs) = await CheckServer(1);
+                OnPingUpdated?.Invoke(isLive, pingMs);
+            });
         }
+        ///<summary>
+        /// This method starts a loop that continuously pings the server at regular intervals (default is every 2 seconds). It uses a CancellationTokenSource to allow stopping the loop when needed. The ping results are invoked through the OnPingUpdated event, which provides both the server status (live or not) and the ping time in milliseconds. This can be useful for keeping track of the server's availability and response time over time.
+        /// </summary>
+        public static void StartPingLoop()
+        {
+            if (pingCancellationTokenSource != null)
+            {
+                Debug.LogWarning("Ping loop is already running.");
+                return;
+            }
+            pingCancellationTokenSource = new CancellationTokenSource();
+            CancellationToken token = pingCancellationTokenSource.Token;
+            Task.Run(async () =>
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    var (isLive, pingMs) = await CheckServer();
+                    OnPingUpdated?.Invoke(isLive, pingMs);
+                    await Task.Delay(2000, token);
+                }
+            }, token);
+        }
+        /// <summary>
+        /// This method starts a loop that continuously pings the server at the specified URL at regular intervals.
+        /// </summary>
+        public static void StopPingLoop()
+        {
+            if (pingCancellationTokenSource == null)
+                return;
+
+            pingCancellationTokenSource.Cancel();
+            pingCancellationTokenSource.Dispose();
+            pingCancellationTokenSource = null;
+        }
+        #endregion
     }
     /// <summary>
     /// This is a custom JsonConverter that converts enum values to lowercase strings when serializing and parses them back to enum values when deserializing. This is useful for ensuring that enum values are consistently formatted in JSON, especially when the API expects lowercase strings.

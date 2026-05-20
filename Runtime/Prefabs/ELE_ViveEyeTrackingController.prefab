@@ -326,7 +326,7 @@ MonoBehaviour:
   eyeDataCollectionWrapper:
     constructs: 000000000100000002000000
     metrics: 
-    models: []
+    models: 
     device: Vive Vision Pro
     clientInfo:
       platform: 
@@ -362,6 +362,7 @@ MonoBehaviour:
     responseMetricsAverages: []
   debugMode: 0
   saveDataToFile: 0
+  saveEyeDataEveryPush: 0
 --- !u!114 &4466638310863678809
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -406,8 +407,10 @@ MonoBehaviour:
   raycastDistance: 10
   rayColour: {r: 1, g: 0, b: 0, a: 1}
   lineRenderer: {fileID: 0}
-  UniEyeDebugger: {fileID: 0}
-  uniLineRenderer: {fileID: 0}
+  leftEyeDebugger: {fileID: 0}
+  leftEyeLineRenderer: {fileID: 0}
+  rightEyeDebugger: {fileID: 0}
+  rightEyeLineRenderer: {fileID: 0}
 --- !u!114 &8036359752331731206
 MonoBehaviour:
   m_ObjectHideFlags: 0
