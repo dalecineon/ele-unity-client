@@ -153,14 +153,20 @@ namespace Cineon.ELE.Networking
 
         #region Ping Functionality
         /// <summary>
-        /// This method checks if a server is live by sending a HEAD request to the specified URL. It attempts to connect to the server a specified number of times (default is 5) and measures the time taken for each attempt. If the server responds successfully, it returns true along with the ping time in milliseconds. If all attempts fail, it returns false and a ping time of -1. This can be used to check if the server is active and to measure the response time.
+        /// This method checks if a server is live by sending a GET request to the specified URL.
+        /// If attempts is 0, it loops continuously with a delay of pingCheckDelayMs between each check until the server responds.
+        /// If attempts is greater than 0, it tries that many times before returning failure.
         /// </summary>
-        /// <param name="attempts"></param>
-        /// <returns></returns>
-        public static async Task<(bool isLive, float pingMs)> CheckServer(int attempts = 5)
+        /// <param name="attempts">Number of ping attempts. 0 = continuous loop until success.</param>
+        /// <param name="pingCheckDelayMs">Delay in milliseconds between ping checks (used when attempts is 0).</param>
+        public static async Task<(bool isLive, float pingMs)> PingRequest(int attempts = 0, int pingCheckDelayMs = 2000)
         {
-            attempts = Mathf.Max(1, attempts);
-            for (int i = 0; i < attempts; i++)
+            bool continuous = attempts == 0;
+            if (!continuous)
+                attempts = Mathf.Max(1, attempts);
+
+            int i = 0;
+            while (continuous || i < attempts)
             {
                 try
                 {
@@ -182,11 +188,16 @@ namespace Cineon.ELE.Networking
                 {
                     Debug.LogWarning($"Attempt {i + 1} failed to ping server.");
                 }
-                if (i < attempts - 1)
+                if (continuous)
+                    await Task.Delay(pingCheckDelayMs);
+                else if (i < attempts - 1)
                     await Task.Delay(100);
+
+                i++;
             }
             return (false, -1f);
         }
+
         /// <summary>
         /// This method pings the server once to check the server is live and awake.
         /// </summary>
@@ -194,14 +205,14 @@ namespace Cineon.ELE.Networking
         {
             Task.Run(async () =>
             {
-                var (isLive, pingMs) = await CheckServer(1);
+                var (isLive, pingMs) = await PingRequest(1);
                 OnPingUpdated?.Invoke(isLive, pingMs);
             });
         }
         ///<summary>
         /// This method starts a loop that continuously pings the server at regular intervals (default is every 2 seconds). It uses a CancellationTokenSource to allow stopping the loop when needed. The ping results are invoked through the OnPingUpdated event, which provides both the server status (live or not) and the ping time in milliseconds. This can be useful for keeping track of the server's availability and response time over time.
         /// </summary>
-        public static void StartPingLoop()
+        public static void StartPingLoop(int attempts = 0, int pingCheckDelayMs = 2000)
         {
             if (pingCancellationTokenSource != null)
             {
@@ -214,9 +225,9 @@ namespace Cineon.ELE.Networking
             {
                 while (!token.IsCancellationRequested)
                 {
-                    var (isLive, pingMs) = await CheckServer();
+                    var (isLive, pingMs) = await PingRequest(attempts, pingCheckDelayMs);
                     OnPingUpdated?.Invoke(isLive, pingMs);
-                    await Task.Delay(2000, token);
+                    await Task.Delay(pingCheckDelayMs, token);
                 }
             }, token);
         }
