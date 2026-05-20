@@ -9,6 +9,9 @@ using Newtonsoft.Json.Serialization;
 using System.Collections.Generic;
 using Newtonsoft.Json.Converters;
 using System.Threading;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Cineon.ELE.Networking
 {
@@ -19,6 +22,16 @@ namespace Cineon.ELE.Networking
         private static CancellationTokenSource pingCancellationTokenSource; //This is used to cancel the ping coroutine when needed.
         public static string version = "1.0.0"; //This is the version of the Cineon Rest Client.
         public static string platform = Application.platform.ToString(); //This is the platform of the Cineon Rest Client.
+#if UNITY_EDITOR
+        static CineonRestClient()
+        {
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state == PlayModeStateChange.ExitingPlayMode || state == PlayModeStateChange.EnteredEditMode)
+                    StopPingLoop();
+            };
+        }
+#endif
         /// <summary>
         /// Store the url endpoints for the server.
         /// </summary>
@@ -157,23 +170,30 @@ namespace Cineon.ELE.Networking
         /// </summary>
         /// <param name="attempts">Number of ping attempts. 0 = continuous loop until success.</param>
         /// <param name="pingCheckDelayMs">Delay in milliseconds between ping checks (used when attempts is 0).</param>
-        public static async Task<(bool isLive, float pingMs)> PingRequest(int attempts = 0, int pingCheckDelayMs = 2000)
+        public static async Task<(bool isLive, float pingMs)> PingRequest(int attempts = 0, int pingCheckDelayMs = 2000, CancellationToken cancellationToken = default)
         {
             bool continuous = attempts == 0;
             if (!continuous)
                 attempts = Mathf.Max(1, attempts);
 
             int i = 0;
-            while (continuous || i < attempts)
+            while ((continuous || i < attempts) && Application.isPlaying && !cancellationToken.IsCancellationRequested)
             {
                 try
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     float startTime = Time.realtimeSinceStartup;
                     using UnityWebRequest request = UnityWebRequest.Get(ServerURL.pingURL);
                     request.timeout = 5;
                     var operation = request.SendWebRequest();
                     while (!operation.isDone)
                     {
+                        if (!Application.isPlaying || cancellationToken.IsCancellationRequested)
+                        {
+                            request.Abort();
+                            cancellationToken.ThrowIfCancellationRequested();
+                            return (false, -1f);
+                        }
                         await Task.Yield();
                     }
                     if (request.result == UnityWebRequest.Result.Success)
@@ -182,14 +202,19 @@ namespace Cineon.ELE.Networking
                         return (true, pingMs);
                     }
                 }
+                catch (OperationCanceledException)
+                {
+                    return (false, -1f);
+                }
                 catch
                 {
-                    Debug.LogWarning($"Attempt {i + 1} failed to ping server.");
+                    if (Application.isPlaying && !cancellationToken.IsCancellationRequested)
+                        Debug.LogWarning($"Attempt {i + 1} failed to ping server.");
                 }
                 if (continuous)
-                    await Task.Delay(pingCheckDelayMs);
+                    await Task.Delay(pingCheckDelayMs, cancellationToken);
                 else if (i < attempts - 1)
-                    await Task.Delay(100);
+                    await Task.Delay(100, cancellationToken);
 
                 i++;
             }
@@ -203,7 +228,7 @@ namespace Cineon.ELE.Networking
         {
             Task.Run(async () =>
             {
-                var (isLive, pingMs) = await PingRequest(1);
+                var (isLive, pingMs) = await PingRequest(1, cancellationToken: CancellationToken.None);
                 OnPingUpdated?.Invoke(isLive, pingMs);
             });
         }
@@ -221,11 +246,21 @@ namespace Cineon.ELE.Networking
             CancellationToken token = pingCancellationTokenSource.Token;
             Task.Run(async () =>
             {
-                while (!token.IsCancellationRequested)
+                try
                 {
-                    var (isLive, pingMs) = await PingRequest(attempts, pingCheckDelayMs);
-                    OnPingUpdated?.Invoke(isLive, pingMs);
-                    await Task.Delay(pingCheckDelayMs, token);
+                    while (!token.IsCancellationRequested)
+                    {
+                        var (isLive, pingMs) = await PingRequest(attempts, pingCheckDelayMs, token);
+                        if (token.IsCancellationRequested)
+                            break;
+
+                        OnPingUpdated?.Invoke(isLive, pingMs);
+                        await Task.Delay(pingCheckDelayMs, token);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Expected when the ping loop is stopped.
                 }
             }, token);
         }
