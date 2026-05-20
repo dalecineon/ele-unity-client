@@ -496,7 +496,7 @@ namespace Cineon.ELE.Storage
         [Header("User Defined Settings")]
         public bool debugMode = false;
         public static string gazeDirectionDebug;
-        [Tooltip("The file will be saved to the StreamingAssets folder on the device.")]
+        [Tooltip("The file will be saved to the StreamingAssets folder if using in editor, otherwise it will be saved to the persistent data path on the device.")]
         public bool saveRawEyeData = false;
 
         /// <summary>
