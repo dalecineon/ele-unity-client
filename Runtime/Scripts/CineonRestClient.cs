@@ -255,8 +255,10 @@ namespace Cineon.ELE.Networking
                     while (!token.IsCancellationRequested)
                     {
                         var (isLive, pingMs) = await PingRequest(attempts, pingCheckDelayMs, token);
+                        Debug.Log("Ping Result: " + (isLive ? $"Live (Ping: {pingMs} ms)" : "Not Live"));
                         if (token.IsCancellationRequested)
                             break;
+
 
                         OnPingUpdated?.Invoke(isLive, pingMs);
                         await Task.Delay(pingCheckDelayMs, token);
