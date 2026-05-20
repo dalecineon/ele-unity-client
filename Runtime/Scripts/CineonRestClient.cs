@@ -39,6 +39,7 @@ namespace Cineon.ELE.Networking
         {
             public static string BaseURL;
             public static string pingURL => $"{BaseURL}/ping";
+            public static string inferencePath => $"{BaseURL}/inference";
         }
         #region POST Request Functionality
         /// <summary>
@@ -54,9 +55,9 @@ namespace Cineon.ELE.Networking
         {
             string json = SerializeToJson(_data);
             Debug.Log($"Serialized JSON: {json}");
-            using (UnityWebRequest request = new UnityWebRequest(ServerURL.BaseURL, "POST"))
+            using (UnityWebRequest request = new UnityWebRequest(ServerURL.inferencePath, "POST"))
             {
-                Debug.Log(ServerURL.BaseURL);
+                Debug.Log(ServerURL.inferencePath);
                 byte[] rawBody = Encoding.UTF8.GetBytes(json);
                 request.uploadHandler = new UploadHandlerRaw(rawBody);
                 request.downloadHandler = new DownloadHandlerBuffer();
@@ -172,6 +173,8 @@ namespace Cineon.ELE.Networking
         /// <param name="pingCheckDelayMs">Delay in milliseconds between ping checks (used when attempts is 0).</param>
         public static async Task<(bool isLive, float pingMs)> PingRequest(int attempts = 0, int pingCheckDelayMs = 2000, CancellationToken cancellationToken = default)
         {
+            Debug.Log($"Server URL : {ServerURL.pingURL}");
+
             bool continuous = attempts == 0;
             if (!continuous)
                 attempts = Mathf.Max(1, attempts);
