@@ -248,27 +248,29 @@ namespace Cineon.ELE.Networking
             }
             pingCancellationTokenSource = new CancellationTokenSource();
             CancellationToken token = pingCancellationTokenSource.Token;
-            Task.Run(async () =>
-            {
-                try
-                {
-                    int attemptsPerCycle = attempts <= 0 ? 1 : attempts;
-                    while (!token.IsCancellationRequested)
-                    {
-                        var (isLive, pingMs) = await PingRequest(attemptsPerCycle, pingCheckDelayMs, token);
-                        Debug.Log("Ping Result: " + (isLive ? $"Live (Ping: {pingMs} ms)" : "Not Live"));
-                        if (token.IsCancellationRequested)
-                            break;
+            RunPingLoop(attempts, pingCheckDelayMs, token);
+        }
 
-                        OnPingUpdated?.Invoke(isLive, pingMs);
-                        await Task.Delay(pingCheckDelayMs, token);
-                    }
-                }
-                catch (OperationCanceledException)
+        private static async void RunPingLoop(int attempts, int pingCheckDelayMs, CancellationToken token)
+        {
+            try
+            {
+                int attemptsPerCycle = attempts <= 0 ? 1 : attempts;
+                while (!token.IsCancellationRequested)
                 {
-                    // Expected when the ping loop is stopped.
+                    var (isLive, pingMs) = await PingRequest(attemptsPerCycle, pingCheckDelayMs, token);
+                    Debug.Log("Ping Result: " + (isLive ? $"Live (Ping: {pingMs} ms)" : "Not Live"));
+                    if (token.IsCancellationRequested)
+                        break;
+
+                    OnPingUpdated?.Invoke(isLive, pingMs);
+                    await Task.Delay(pingCheckDelayMs, token);
                 }
-            }, token);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when the ping loop is stopped.
+            }
         }
         /// <summary>
         /// This method starts a loop that continuously pings the server at the specified URL at regular intervals.
