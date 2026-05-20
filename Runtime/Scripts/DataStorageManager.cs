@@ -31,9 +31,23 @@ namespace Cineon.ELE.DownloadHelper
                 folderName = "CineonELE";
             }
             string targetFolder = Path.Combine(path, folderName);
-            if (!Directory.Exists(targetFolder))
+            try
             {
-                Directory.CreateDirectory(targetFolder);
+                if (!Directory.Exists(targetFolder))
+                {
+                    Directory.CreateDirectory(targetFolder);
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is NotSupportedException)
+            {
+                // Some locations (for example StreamingAssets on device builds) are read-only.
+                string fallbackPath = Application.persistentDataPath;
+                targetFolder = Path.Combine(fallbackPath, folderName);
+                Debug.LogWarning($"Failed to create directory at '{path}'. Falling back to persistentDataPath: {targetFolder}. Error: {ex.Message}");
+                if (!Directory.Exists(targetFolder))
+                {
+                    Directory.CreateDirectory(targetFolder);
+                }
             }
             var settings = new JsonSerializerSettings
             {
@@ -74,7 +88,21 @@ namespace Cineon.ELE.DownloadHelper
             }
             jsonDataList.Add(data);
             string updatedJson = JsonConvert.SerializeObject(jsonDataList, settings);
-            File.WriteAllText(fullFilePath, updatedJson);
+            try
+            {
+                File.WriteAllText(fullFilePath, updatedJson);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                string fallbackFolder = Path.Combine(Application.persistentDataPath, folderName);
+                if (!Directory.Exists(fallbackFolder))
+                {
+                    Directory.CreateDirectory(fallbackFolder);
+                }
+                string fallbackFilePath = Path.Combine(fallbackFolder, _fileName);
+                Debug.LogWarning($"Failed to write JSON to '{fullFilePath}'. Falling back to '{fallbackFilePath}'. Error: {ex.Message}");
+                File.WriteAllText(fallbackFilePath, updatedJson);
+            }
         }
     }
 }
