@@ -19,7 +19,6 @@ namespace Cineon.ELE.Networking
         private static CancellationTokenSource pingCancellationTokenSource; //This is used to cancel the ping coroutine when needed.
         public static string version = "1.0.0"; //This is the version of the Cineon Rest Client.
         public static string platform = Application.platform.ToString(); //This is the platform of the Cineon Rest Client.
-
         /// <summary>
         /// Store the url endpoints for the server.
         /// </summary>
@@ -28,7 +27,6 @@ namespace Cineon.ELE.Networking
             public static string BaseURL;
             public static string pingURL => $"{BaseURL}/ping";
         }
-
         #region POST Request Functionality
         /// <summary>
         /// Sends Json Data to a server using a post request. 
