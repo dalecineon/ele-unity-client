@@ -171,7 +171,7 @@ namespace Cineon.ELE.Networking
                 try
                 {
                     float startTime = Time.realtimeSinceStartup;
-                    using UnityWebRequest request = UnityWebRequest.Get(ServerURL.BaseURL);
+                    using UnityWebRequest request = UnityWebRequest.Get(ServerURL.pingURL);
                     request.timeout = 5;
                     var operation = request.SendWebRequest();
                     while (!operation.isDone)
