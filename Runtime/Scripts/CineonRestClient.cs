@@ -17,6 +17,7 @@ namespace Cineon.ELE.Networking
 {
     public static class CineonRestClient
     {
+        public static bool allowServerLogs = false;
         public static Action<string> OnServerError; //This is an event which any script can subscribe to, to get error responses from the Cineon Rest Client.
         public static Action<bool, float> OnPingUpdated; //This event is fired when a ping is detected, this maybe after a certain amount of time. It also gives the ping time in milliseconds.
         private static CancellationTokenSource pingCancellationTokenSource; //This is used to cancel the ping coroutine when needed.
@@ -73,7 +74,7 @@ namespace Cineon.ELE.Networking
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"Failed to Send Web Request {ex.Message}");
+                    if (allowServerLogs) Debug.LogWarning($"Failed to Send Web Request {ex.Message}");
                     OnServerError?.Invoke(ex.Message);
                     throw;
                 }
@@ -83,36 +84,36 @@ namespace Cineon.ELE.Networking
                 }
                 if (request.result == UnityWebRequest.Result.ConnectionError)
                 {
-                    Debug.LogWarning($"Connection Error: {request.error}");
+                    if (allowServerLogs) Debug.LogWarning($"Connection Error: {request.error}");
                     OnServerError?.Invoke($"Connection Error: {request.error}");
-                    throw new Exception($"Connection Error: {request.error}");
+                    //throw new Exception($"Connection Error: {request.error}");
                 }
                 else if (request.result != UnityWebRequest.Result.Success)
                 {
-                    Debug.LogWarning($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
+                    if (allowServerLogs) Debug.LogWarning($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
                     OnServerError?.Invoke($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
-                    throw new Exception($"POST Error: {request.error}");
+                    //throw new Exception($"POST Error: {request.error}");
                 }
                 else if (request.result == UnityWebRequest.Result.ProtocolError)
                 {
-                    Debug.LogWarning($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
+                    if (allowServerLogs) Debug.LogWarning($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
                     OnServerError?.Invoke($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
-                    throw new Exception($"POST Error: {request.error}");
+                    //throw new Exception($"POST Error: {request.error}");
                 }
                 else if (request.result == UnityWebRequest.Result.DataProcessingError)
                 {
-                    Debug.LogWarning($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
+                    if (allowServerLogs) Debug.LogWarning($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
                     OnServerError?.Invoke($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
-                    throw new Exception($"POST Error: {request.error}");
+                    //throw new Exception($"POST Error: {request.error}");
                 }
                 try
                 {
-                    Debug.Log($"T RESPONSE : {request.downloadHandler.text}");
+                    if (allowServerLogs) Debug.Log($"T RESPONSE : {request.downloadHandler.text}");
                     return DeserializeFromJson<TResponse>(request.downloadHandler.text);
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"Deserialization Error {ex.Message} Response : {request.downloadHandler.text}");
+                    if (allowServerLogs) Debug.LogWarning($"Deserialization Error {ex.Message} Response : {request.downloadHandler.text}");
                     OnServerError?.Invoke($"Deserialization Error {ex.Message} Response : {request.downloadHandler.text}");
                     throw;
                 }
@@ -147,7 +148,7 @@ namespace Cineon.ELE.Networking
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Serialization Error: {ex.Message}");
+                if (allowServerLogs) Debug.LogWarning($"Serialization Error: {ex.Message}");
                 OnServerError?.Invoke($"Serialization Error: {ex.Message}");
                 throw;
             }
@@ -160,7 +161,7 @@ namespace Cineon.ELE.Networking
         /// <returns></returns>
         private static TResponse DeserializeFromJson<TResponse>(string data)
         {
-            Debug.LogWarning(data);
+            if (allowServerLogs) Debug.Log(data);
             return JsonConvert.DeserializeObject<TResponse>(data);
         }
 
@@ -176,10 +177,10 @@ namespace Cineon.ELE.Networking
         /// <param name="pingCheckDelayMs">Delay in milliseconds between ping checks (used when attempts is 0).</param>
         public static async Task<(bool isLive, float pingMs)> PingRequest(int attempts = 0, int pingCheckDelayMs = 2000, CancellationToken cancellationToken = default)
         {
-            Debug.Log($"Server URL : {ServerURL.pingURL}");
+            if (allowServerLogs) Debug.Log($"Server URL : {ServerURL.pingURL}");
 
             bool continuous = attempts == 0;
-            Debug.Log($"continuous : {continuous}");
+            if (allowServerLogs) Debug.Log($"continuous : {continuous}");
             if (!continuous)
                 attempts = Mathf.Max(1, attempts);
 
@@ -215,7 +216,7 @@ namespace Cineon.ELE.Networking
                 }
                 catch
                 {
-                    if (Application.isPlaying && !cancellationToken.IsCancellationRequested)
+                    if (allowServerLogs && Application.isPlaying && !cancellationToken.IsCancellationRequested)
                         Debug.LogWarning($"Attempt {i + 1} failed to ping server.");
                 }
                 if (continuous)
@@ -262,7 +263,7 @@ namespace Cineon.ELE.Networking
                 while (!token.IsCancellationRequested)
                 {
                     var (isLive, pingMs) = await PingRequest(attemptsPerCycle, pingCheckDelayMs, token);
-                    Debug.Log("Ping Result: " + (isLive ? $"Live (Ping: {pingMs} ms)" : "Not Live"));
+                    if (allowServerLogs) Debug.Log("Ping Result: " + (isLive ? $"Live (Ping: {pingMs} ms)" : "Not Live"));
                     if (token.IsCancellationRequested)
                         break;
 
