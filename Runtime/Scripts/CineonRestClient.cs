@@ -73,7 +73,7 @@ namespace Cineon.ELE.Networking
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"Failed to Send Web Request {ex.Message}");
+                    Debug.LogWarning($"Failed to Send Web Request {ex.Message}");
                     OnServerError?.Invoke(ex.Message);
                     throw;
                 }
@@ -83,25 +83,25 @@ namespace Cineon.ELE.Networking
                 }
                 if (request.result == UnityWebRequest.Result.ConnectionError)
                 {
-                    Debug.LogError($"Connection Error: {request.error}");
+                    Debug.LogWarning($"Connection Error: {request.error}");
                     OnServerError?.Invoke($"Connection Error: {request.error}");
                     throw new Exception($"Connection Error: {request.error}");
                 }
                 else if (request.result != UnityWebRequest.Result.Success)
                 {
-                    Debug.LogError($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
+                    Debug.LogWarning($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
                     OnServerError?.Invoke($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
                     throw new Exception($"POST Error: {request.error}");
                 }
                 else if (request.result == UnityWebRequest.Result.ProtocolError)
                 {
-                    Debug.LogError($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
+                    Debug.LogWarning($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
                     OnServerError?.Invoke($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
                     throw new Exception($"POST Error: {request.error}");
                 }
                 else if (request.result == UnityWebRequest.Result.DataProcessingError)
                 {
-                    Debug.LogError($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
+                    Debug.LogWarning($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
                     OnServerError?.Invoke($"POST Error: {request.error} Response : {request.downloadHandler.text} ");
                     throw new Exception($"POST Error: {request.error}");
                 }
@@ -112,7 +112,7 @@ namespace Cineon.ELE.Networking
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"Deserialization Error {ex.Message} Response : {request.downloadHandler.text}");
+                    Debug.LogWarning($"Deserialization Error {ex.Message} Response : {request.downloadHandler.text}");
                     OnServerError?.Invoke($"Deserialization Error {ex.Message} Response : {request.downloadHandler.text}");
                     throw;
                 }
@@ -147,7 +147,7 @@ namespace Cineon.ELE.Networking
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Serialization Error: {ex.Message}");
+                Debug.LogWarning($"Serialization Error: {ex.Message}");
                 OnServerError?.Invoke($"Serialization Error: {ex.Message}");
                 throw;
             }
@@ -160,7 +160,7 @@ namespace Cineon.ELE.Networking
         /// <returns></returns>
         private static TResponse DeserializeFromJson<TResponse>(string data)
         {
-            Debug.Log(data);
+            Debug.LogWarning(data);
             return JsonConvert.DeserializeObject<TResponse>(data);
         }
 

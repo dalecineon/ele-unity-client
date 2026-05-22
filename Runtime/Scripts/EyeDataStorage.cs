@@ -100,9 +100,19 @@ namespace Cineon.ELE.Storage
 
             /// <summary>
             /// Appends all list data from another EyeDataCollection into this one.
+            /// Pre-allocates capacity to avoid repeated list resizing and GC pressure.
             /// </summary>
             public void AppendFrom(EyeDataCollection other)
             {
+                int count = other.timestamp.Count;
+                if (count == 0) return;
+
+                // Pre-allocate to avoid multiple list resizes (each resize creates garbage)
+                EnsureCapacity(timestamp, count);
+                EnsureCapacity(eye.PupilDiameter, count);
+                EnsureCapacity(eye.Openness, count);
+                EnsureCapacity(eye.GazeObject, count);
+
                 timestamp.AddRange(other.timestamp);
                 eye.GazeDirection.AddRange(other.eye.GazeDirection);
                 eye.GazeObject.AddRange(other.eye.GazeObject);
@@ -110,6 +120,13 @@ namespace Cineon.ELE.Storage
                 eye.Openness.AddRange(other.eye.Openness);
                 head.Direction.AddRange(other.head.Direction);
                 head.Position.AddRange(other.head.Position);
+            }
+
+            private static void EnsureCapacity<T>(List<T> list, int additionalCount)
+            {
+                int required = list.Count + additionalCount;
+                if (list.Capacity < required)
+                    list.Capacity = required;
             }
 
             /// <summary>
@@ -204,6 +221,11 @@ namespace Cineon.ELE.Storage
 
             public void AddRange(GazeVectorList other)
             {
+                int count = other.x.Count;
+                if (count == 0) return;
+                if (x.Capacity < x.Count + count) x.Capacity = x.Count + count;
+                if (y.Capacity < y.Count + count) y.Capacity = y.Count + count;
+                if (z.Capacity < z.Count + count) z.Capacity = z.Count + count;
                 x.AddRange(other.x);
                 y.AddRange(other.y);
                 z.AddRange(other.z);
@@ -506,6 +528,39 @@ namespace Cineon.ELE.Storage
         private static string GetEyeDataSavePath()
         {
             return Application.platform == RuntimePlatform.Android ? Application.persistentDataPath : Application.streamingAssetsPath;
+        }
+
+        /// <summary>
+        /// Binary search for the index where timestamps cross the cutoff time.
+        /// Returns the number of entries before the cutoff (i.e. how many to remove).
+        /// Much faster than parsing every timestamp linearly.
+        /// </summary>
+        private static int BinarySearchTimestampCutoff(List<string> timestamps, DateTime cutoffTime)
+        {
+            int lo = 0, hi = timestamps.Count - 1;
+            int result = 0;
+            while (lo <= hi)
+            {
+                int mid = lo + (hi - lo) / 2;
+                if (DateTime.TryParse(timestamps[mid], out DateTime midTime))
+                {
+                    if (midTime < cutoffTime)
+                    {
+                        result = mid + 1;
+                        lo = mid + 1;
+                    }
+                    else
+                    {
+                        hi = mid - 1;
+                    }
+                }
+                else
+                {
+                    // If parse fails, fall back to linear from this point
+                    break;
+                }
+            }
+            return result;
         }
 
         /// <summary>
@@ -858,15 +913,17 @@ namespace Cineon.ELE.Storage
         /// </summary>
         public void SetStaticWindow()
         {
-            eyeDataCollectionWrapper.eyeData = new EyeDataCollection();
             if (eyeDataCollectionWrapper.temporaryEyeData.Count > 0)
             {
-                eyeDataCollectionWrapper.eyeData.AppendFrom(eyeDataCollectionWrapper.temporaryEyeData[0]);
+                // Reference swap instead of copy — avoids allocations and list copies entirely
+                eyeDataCollectionWrapper.eyeData = eyeDataCollectionWrapper.temporaryEyeData[0];
+                eyeDataCollectionWrapper.temporaryEyeData[0] = new EyeDataCollection();
+            }
+            else
+            {
+                eyeDataCollectionWrapper.eyeData = new EyeDataCollection();
             }
             eyeDataCollectionWrapper.temporaryEyeData.Clear();
-            Debug.Log("Cleared Temp Eye Data");
-            Debug.Log($"Temp count: {eyeDataCollectionWrapper.temporaryEyeData.Count}");
-            Debug.Log($"Eye data entries: {eyeDataCollectionWrapper.eyeData.DataCount}");
         }
 
         /// <summary>
@@ -883,25 +940,9 @@ namespace Cineon.ELE.Storage
                     EyeDataCollection tempData = eyeDataCollectionWrapper.temporaryEyeData[0];
                     if (tempData.DataCount > 0 && DateTime.TryParse(tempData.timestamp[0], out DateTime startTime))
                     {
-                        int removeCount = 0;
-                        for (int i = 0; i < tempData.DataCount; i++)
-                        {
-                            if (DateTime.TryParse(tempData.timestamp[i], out DateTime entryTime))
-                            {
-                                if ((entryTime - startTime).TotalSeconds < rollingWindowTime)
-                                {
-                                    removeCount++;
-                                }
-                                else
-                                {
-                                    break;
-                                }
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
+                        // Binary search for the cutoff point (timestamps are chronological)
+                        DateTime cutoffTime = startTime.AddSeconds(rollingWindowTime);
+                        int removeCount = BinarySearchTimestampCutoff(tempData.timestamp, cutoffTime);
                         if (removeCount > 0)
                         {
                             tempData.RemoveRange(0, removeCount);
@@ -936,26 +977,9 @@ namespace Cineon.ELE.Storage
                 EyeDataCollection tempData = eyeDataCollectionWrapper.temporaryEyeData[0];
                 if (tempData.DataCount > 0 && DateTime.TryParse(tempData.timestamp[^1], out DateTime latestTime))
                 {
-                    int removeCount = 0;
-                    for (int i = 0; i < tempData.DataCount; i++)
-                    {
-                        if (DateTime.TryParse(tempData.timestamp[i], out DateTime entryTime))
-                        {
-                            if ((latestTime - entryTime).TotalSeconds > rollingWindowTime)
-                            {
-                                removeCount++;
-                            }
-                            else
-                            {
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            Debug.LogError("Failed to parse timestamp from eye data.");
-                            break;
-                        }
-                    }
+                    // Binary search for cutoff: remove entries older than rollingWindowTime from latest
+                    DateTime cutoffTime = latestTime.AddSeconds(-rollingWindowTime);
+                    int removeCount = BinarySearchTimestampCutoff(tempData.timestamp, cutoffTime);
                     if (removeCount > 0)
                     {
                         tempData.RemoveRange(0, removeCount);
