@@ -53,12 +53,15 @@ namespace Cineon.ELE.Networking
         /// <returns>A TResponse which can be used to populate a class.</returns>
         public static async Task<TResponse> Post<TRequest, TResponse>(TRequest _data)
         {
-            string json = SerializeToJson(_data);
-            Debug.Log($"Serialized JSON: {json}");
+            // Serialize on a background thread to avoid blocking the main thread (critical for VR frame rate)
+            byte[] rawBody = await Task.Run(() =>
+            {
+                string json = SerializeToJson(_data);
+                return Encoding.UTF8.GetBytes(json);
+            });
+
             using (UnityWebRequest request = new UnityWebRequest(ServerURL.inferencePath, "POST"))
             {
-                Debug.Log(ServerURL.inferencePath);
-                byte[] rawBody = Encoding.UTF8.GetBytes(json);
                 request.uploadHandler = new UploadHandlerRaw(rawBody);
                 request.downloadHandler = new DownloadHandlerBuffer();
                 request.SetRequestHeader("x-api-key", EyeDataDistributor.Instance.apiKey);
@@ -133,7 +136,7 @@ namespace Cineon.ELE.Networking
                         NamingStrategy = new SnakeCaseNamingStrategy()
                     },
                     NullValueHandling = NullValueHandling.Ignore,
-                    Formatting = Formatting.Indented,
+                    Formatting = Formatting.None,
                     Converters = new List<JsonConverter>
                     {
                         new LowercaseEnumConverter()
