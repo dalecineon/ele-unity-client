@@ -67,6 +67,9 @@ namespace Cineon.ELE.Networking
         [SerializeField]
         [Tooltip("This will allow you to start the ping process at the start of the scene. This is useful to check if the server is live before starting the data collection.")]
         private bool startPingOnStart = false; //This is a bool to start the ping at the start.
+        [SerializeField]
+        [Tooltip("Enable or disable debug logs for EyeDataDistributor.")]
+        private bool showDebugs = false;
 
         #region Event Listeners
         /// <summary>
@@ -102,17 +105,17 @@ namespace Cineon.ELE.Networking
             }
             else
             {
-                Debug.LogWarning("Multiple instances of EyeDataDistributor detected. Destroying duplicate.");
+                LogWarning("Multiple instances of EyeDataDistributor detected. Destroying duplicate.");
                 Destroy(gameObject);
             }
 
             if (serverType == ServerType.customURL)
             {
-                Debug.Log("Using Development Server: " + customURL);
+                Log("Using Development Server: " + customURL);
             }
             else
             {
-                Debug.Log("Using Production Server: " + productionServerURL);
+                Log("Using Production Server: " + productionServerURL);
             }
 
             //Update the base url in the static so you don't have to pass through url on each function;
@@ -128,7 +131,7 @@ namespace Cineon.ELE.Networking
         {
             if (eyeDataStorage == null)
             {
-                Debug.LogError("EyeDataStorage reference is missing.");
+                LogError("EyeDataStorage reference is missing.");
                 enabled = false;
                 return;
             }
@@ -162,7 +165,7 @@ namespace Cineon.ELE.Networking
         /// This logs out an error if any problems with the send request.
         /// </summary>
         /// <param name="msg"></param>
-        private void ServerErrorResponse(string msg) => Debug.Log($"Server Response Message : {msg}");
+        private void ServerErrorResponse(string msg) => Log($"Server Response Message : {msg}");
 
         /// <summary>
         /// Waits for the initial Eye Data to then send to the server.
@@ -199,7 +202,7 @@ namespace Cineon.ELE.Networking
         {
             if (eyeDataStorage.eyeDataCollectionWrapper.temporaryEyeData.Count == 0)
             {
-                Debug.LogWarning("No eye data available for retrieval.");
+                LogWarning("No eye data available for retrieval.");
                 return;
             }
             else
@@ -214,12 +217,12 @@ namespace Cineon.ELE.Networking
                 {
                     eyeDataStorage.SetStaticWindow();
                     float afterWindow = Time.realtimeSinceStartup;
-                    Debug.Log($"[PERF] Frame {frameAtStart} | CollectData: {(afterCollect - frameStart) * 1000f:F2}ms | SetStaticWindow: {(afterWindow - afterCollect) * 1000f:F2}ms | DataPoints: {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount}");
+                    Log($"[PERF] Frame {frameAtStart} | CollectData: {(afterCollect - frameStart) * 1000f:F2}ms | SetStaticWindow: {(afterWindow - afterCollect) * 1000f:F2}ms | DataPoints: {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount}");
                     PostData().ContinueWith(task =>
                     {
                         if (task.IsFaulted)
                         {
-                            Debug.LogError($"Error posting data: {task.Exception?.Message}");
+                            LogError($"Error posting data: {task.Exception?.Message}");
                         }
                     });
                 }
@@ -235,12 +238,12 @@ namespace Cineon.ELE.Networking
                         eyeDataStorage.SetSampleWindow(isFirstCollection, rollingWindow);
                     }
                     float afterWindow = Time.realtimeSinceStartup;
-                    Debug.Log($"[PERF] Frame {frameAtStart} | CollectData: {(afterCollect - frameStart) * 1000f:F2}ms | SetSampleWindow: {(afterWindow - afterCollect) * 1000f:F2}ms | DataPoints: {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount}");
+                    Log($"[PERF] Frame {frameAtStart} | CollectData: {(afterCollect - frameStart) * 1000f:F2}ms | SetSampleWindow: {(afterWindow - afterCollect) * 1000f:F2}ms | DataPoints: {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount}");
                     PostData().ContinueWith(task =>
                     {
                         if (task.IsFaulted)
                         {
-                            Debug.LogError($"Error posting data: {task.Exception?.Message}");
+                            LogError($"Error posting data: {task.Exception?.Message}");
                         }
                     });
                 }
@@ -271,11 +274,11 @@ namespace Cineon.ELE.Networking
                 OnServerResponseSuccess?.Invoke();
                 eyeDataStorage.GetResponseAverages();
                 float responseProcessEnd = Time.realtimeSinceStartup;
-                Debug.Log($"[PERF] #{requestId} | Send+Wait: {elapsed * 1000f:F1}ms (frames {frameAtStart}-{frameAtEnd}) | ResponseProcessing: {(responseProcessEnd - responseProcessStart) * 1000f:F2}ms");
+                Log($"[PERF] #{requestId} | Send+Wait: {elapsed * 1000f:F1}ms (frames {frameAtStart}-{frameAtEnd}) | ResponseProcessing: {(responseProcessEnd - responseProcessStart) * 1000f:F2}ms");
             }
             else
             {
-                Debug.LogError($"[PERF] #{requestId} | FAILED after {elapsed:F2}s");
+                LogError($"[PERF] #{requestId} | FAILED after {elapsed:F2}s");
             }
         }
 
@@ -284,7 +287,7 @@ namespace Cineon.ELE.Networking
         /// </summary>
         private void StartEyeDataCollection()
         {
-            Debug.Log($"Starting the eye data collection.");
+            Log($"Starting the eye data collection.");
             isFirstCollection = true;
             serverResponseTime = 0f;
             serverResponseTimes.Clear();
@@ -298,8 +301,23 @@ namespace Cineon.ELE.Networking
         /// </summary>
         private void StopEyeDataCollection()
         {
-            Debug.Log($"Stopping the eye data collection.");
+            Log($"Stopping the eye data collection.");
             StopCoroutine(rollingWindowRoutine);
+        }
+
+        private void Log(string message)
+        {
+            if (showDebugs) Debug.Log(message);
+        }
+
+        private void LogWarning(string message)
+        {
+            if (showDebugs) Debug.LogWarning(message);
+        }
+
+        private void LogError(string message)
+        {
+            if (showDebugs) Debug.LogError(message);
         }
     }
 }
