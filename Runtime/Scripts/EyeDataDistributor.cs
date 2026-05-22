@@ -204,20 +204,22 @@ namespace Cineon.ELE.Networking
             }
             else
             {
+                float frameStart = Time.realtimeSinceStartup;
+                int frameAtStart = Time.frameCount;
+
                 CollectData?.Invoke();
+                float afterCollect = Time.realtimeSinceStartup;
+
                 if (useOnlyStaticWindows)
                 {
                     eyeDataStorage.SetStaticWindow();
-                    Debug.Log($"[EyeDataDistributor] Static window - sending {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount} data points.");
+                    float afterWindow = Time.realtimeSinceStartup;
+                    Debug.Log($"[PERF] Frame {frameAtStart} | CollectData: {(afterCollect - frameStart) * 1000f:F2}ms | SetStaticWindow: {(afterWindow - afterCollect) * 1000f:F2}ms | DataPoints: {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount}");
                     PostData().ContinueWith(task =>
                     {
                         if (task.IsFaulted)
                         {
                             Debug.LogError($"Error posting data: {task.Exception?.Message}");
-                        }
-                        else
-                        {
-                            Debug.Log("Eye Data Sent Successfully.");
                         }
                     });
                 }
@@ -232,16 +234,13 @@ namespace Cineon.ELE.Networking
                     {
                         eyeDataStorage.SetSampleWindow(isFirstCollection, rollingWindow);
                     }
-                    Debug.Log($"[EyeDataDistributor] Rolling window - sending {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount} data points at {Time.time:F1}s.");
+                    float afterWindow = Time.realtimeSinceStartup;
+                    Debug.Log($"[PERF] Frame {frameAtStart} | CollectData: {(afterCollect - frameStart) * 1000f:F2}ms | SetSampleWindow: {(afterWindow - afterCollect) * 1000f:F2}ms | DataPoints: {eyeDataStorage.eyeDataCollectionWrapper.eyeData.DataCount}");
                     PostData().ContinueWith(task =>
                     {
                         if (task.IsFaulted)
                         {
                             Debug.LogError($"Error posting data: {task.Exception?.Message}");
-                        }
-                        else
-                        {
-                            Debug.Log("Eye Data Sent Successfully.");
                         }
                     });
                 }
@@ -254,22 +253,29 @@ namespace Cineon.ELE.Networking
         private async Task PostData()
         {
             int requestId = ++requestCounter;
-            Debug.Log($"[EyeDataDistributor] #{requestId} Sending data to server...");
-            float startTime = Time.realtimeSinceStartup;
+            float preSerialize = Time.realtimeSinceStartup;
+            int frameAtStart = Time.frameCount;
+
             EyeDataStorage.ResponseContainer response = await CineonRestClient.Post<EyeDataStorage.EyeDataCollectionWrapper, EyeDataStorage.ResponseContainer>(eyeDataStorage.eyeDataCollectionWrapper);
-            float elapsed = Time.realtimeSinceStartup - startTime;
+
+            float postResponse = Time.realtimeSinceStartup;
+            int frameAtEnd = Time.frameCount;
+            float elapsed = postResponse - preSerialize;
             serverResponseTime = elapsed;
             serverResponseTimes.Add(new ServerResponseEntry(requestId, elapsed));
+
+            float responseProcessStart = Time.realtimeSinceStartup;
             if (response != null)
             {
                 eyeDataStorage.AddResponseToCurrentSet(response);
-                Debug.Log($"[EyeDataDistributor] #{requestId} Response received in {elapsed:F2}s.");
                 OnServerResponseSuccess?.Invoke();
                 eyeDataStorage.GetResponseAverages();
+                float responseProcessEnd = Time.realtimeSinceStartup;
+                Debug.Log($"[PERF] #{requestId} | Send+Wait: {elapsed * 1000f:F1}ms (frames {frameAtStart}-{frameAtEnd}) | ResponseProcessing: {(responseProcessEnd - responseProcessStart) * 1000f:F2}ms");
             }
             else
             {
-                Debug.LogError($"[EyeDataDistributor] #{requestId} Failed to receive response from server after {elapsed:F2}s.");
+                Debug.LogError($"[PERF] #{requestId} | FAILED after {elapsed:F2}s");
             }
         }
 
