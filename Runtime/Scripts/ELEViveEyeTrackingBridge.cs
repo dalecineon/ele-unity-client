@@ -263,10 +263,13 @@ namespace Cineon.ELE.Utils
                     Vector3 leftGazeForward = head.InverseTransformDirection(GetEyeForward(leftGaze));
                     Vector3 rightGazeForward = head.InverseTransformDirection(GetEyeForward(rightGaze));
 
-                    if (leftGazeForward.z > 0) leftGazeForward.z = -leftGazeForward.z;
-                    if (rightGazeForward.z > 0) rightGazeForward.z = -rightGazeForward.z;
+                    //if (leftGazeForward.z > 0) leftGazeForward.z = -leftGazeForward.z;
+                    //if (rightGazeForward.z > 0) rightGazeForward.z = -rightGazeForward.z;
+                    Debug.Log($"Left Gaze Forward: {leftGazeForward}, Right Gaze Forward: {rightGazeForward}");
 
                     Vector3 combinedGazeForward = ((leftGazeForward + rightGazeForward) / 2).normalized;
+
+                    Debug.Log($"Combined Gaze Forward: {combinedGazeForward}");
 
                     eye.GazeDirection.Add(combinedGazeForward);
                     eye.GazeObject.Add(currentGazedAtObject);
