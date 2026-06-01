@@ -134,7 +134,7 @@ namespace Cineon.ELE.Utils
             headData.Position.Add(dummyHeadPosition);
             headData.Direction.Add(dummyHeadDirection);
 
-            Vector3 gazeDir = CreateRandomUnitVector();
+            Vector3 gazeDir = CreateRandomUnitVector(GazeHemisphere.Forward);
             eye.GazeDirection.Add(gazeDir);
             eye.GazeObject.Add(currentGazedAtObject);
             eye.PupilDiameter.Add(UnityEngine.Random.Range(2f, 8f));
@@ -152,14 +152,33 @@ namespace Cineon.ELE.Utils
             EyeTrackingDataChanged?.Invoke(data);
         }
 
+        public enum GazeHemisphere
+        {
+            Forward,
+            Reverse
+        }
+
         /// <summary>
-        /// This creates random eye forward direction movement and the z is always a minus value.
+        /// This creates random eye forward direction movement.
+        /// Forward: z in [0, 1] (positive Z hemisphere).
+        /// Reverse: z in [-1, 0] (negative Z hemisphere).
         /// </summary>
         /// <returns></returns>
-        public Vector3 CreateRandomUnitVector()
+        public Vector3 CreateRandomUnitVector(GazeHemisphere hemisphere = GazeHemisphere.Reverse)
         {
-            float azimin = Mathf.PI / 2f;
-            float azimax = 3f * Mathf.PI / 2f;
+            float azimin, azimax;
+            if (hemisphere == GazeHemisphere.Forward)
+            {
+                // z positive: azimuth in [-PI/2, PI/2] where cos >= 0
+                azimin = -Mathf.PI / 2f;
+                azimax = Mathf.PI / 2f;
+            }
+            else
+            {
+                // z negative: azimuth in [PI/2, 3PI/2] where cos <= 0
+                azimin = Mathf.PI / 2f;
+                azimax = 3f * Mathf.PI / 2f;
+            }
             float azimuth = UnityEngine.Random.Range(azimin, azimax);
             float sinElevation = UnityEngine.Random.Range(-1f, 1f);
             float cosElevation = Mathf.Sqrt(1f - sinElevation * sinElevation);
